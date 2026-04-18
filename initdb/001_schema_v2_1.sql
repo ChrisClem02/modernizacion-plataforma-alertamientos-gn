@@ -45,7 +45,7 @@ CREATE TABLE territorio_estado (
 CREATE UNIQUE INDEX uq_territorio_estado_activo ON territorio_estado (id_estado) WHERE activo = TRUE;
 
 CREATE TABLE nivel_operativo (
-    id_nivel_operativo SMALLSERIAL PRIMARY KEY,
+    id_nivel_operativo SMALLINT PRIMARY KEY,
     nombre_nivel VARCHAR(50) NOT NULL UNIQUE,
     descripcion VARCHAR(200),
     jerarquia_orden SMALLINT NOT NULL UNIQUE,
@@ -53,6 +53,9 @@ CREATE TABLE nivel_operativo (
     CONSTRAINT chk_nivel_nombre CHECK (btrim(nombre_nivel) <> ''),
     CONSTRAINT chk_nivel_orden CHECK (jerarquia_orden > 0)
 );
+COMMENT ON TABLE nivel_operativo IS 'Catalogo de niveles de visibilidad institucional.';
+COMMENT ON COLUMN nivel_operativo.id_nivel_operativo IS 'Codigo institucional fijo: 1=TORRE, 2=ESTATAL, 3=TERRITORIAL, 4=NACIONAL.';
+COMMENT ON COLUMN nivel_operativo.jerarquia_orden IS 'Orden ascendente del alcance de visibilidad institucional.';
 
 CREATE TABLE rol_sistema (
     id_rol SMALLSERIAL PRIMARY KEY,
@@ -130,7 +133,7 @@ CREATE TABLE usuario (
     apellido_paterno VARCHAR(100) NOT NULL,
     apellido_materno VARCHAR(100),
     nombre_usuario VARCHAR(60) NOT NULL UNIQUE,
-    correo_electronico VARCHAR(150) UNIQUE,
+    correo_electronico VARCHAR(150) NOT NULL,
     hash_contrasena TEXT NOT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_ultimo_acceso TIMESTAMP,
@@ -139,9 +142,17 @@ CREATE TABLE usuario (
     CONSTRAINT chk_usuario_nombres CHECK (btrim(nombres) <> ''),
     CONSTRAINT chk_usuario_apellido_paterno CHECK (btrim(apellido_paterno) <> ''),
     CONSTRAINT chk_usuario_nombre_usuario CHECK (btrim(nombre_usuario) <> ''),
-    CONSTRAINT chk_usuario_correo CHECK (correo_electronico IS NULL OR position('@' IN correo_electronico) > 1),
+    CONSTRAINT chk_usuario_correo CHECK (
+        btrim(correo_electronico) <> ''
+        AND correo_electronico = btrim(correo_electronico)
+        AND position('@' IN correo_electronico) > 1
+        AND position(' ' IN correo_electronico) = 0
+    ),
     CONSTRAINT chk_hash_contrasena_longitud CHECK (length(hash_contrasena) >= 60)
 );
+CREATE UNIQUE INDEX uq_usuario_correo_lower ON usuario (lower(correo_electronico));
+COMMENT ON TABLE usuario IS 'Usuarios autorizados del sistema.';
+COMMENT ON COLUMN usuario.correo_electronico IS 'Correo institucional obligatorio para identificacion y acceso.';
 
 CREATE TABLE usuario_ambito (
     id_usuario_ambito BIGSERIAL PRIMARY KEY,
@@ -172,6 +183,9 @@ CREATE INDEX idx_usuario_ambito_usuario_nivel ON usuario_ambito (id_usuario, id_
 CREATE INDEX idx_usuario_ambito_torre ON usuario_ambito (id_torre) WHERE id_torre IS NOT NULL;
 CREATE INDEX idx_usuario_ambito_estado ON usuario_ambito (id_estado) WHERE id_estado IS NOT NULL;
 CREATE INDEX idx_usuario_ambito_territorio ON usuario_ambito (id_territorio) WHERE id_territorio IS NOT NULL;
+COMMENT ON TABLE usuario_ambito IS 'Asigna el ambito de visibilidad institucional del usuario.';
+COMMENT ON COLUMN usuario_ambito.id_nivel_operativo IS 'Nivel de visibilidad institucional efectivo del usuario.';
+COMMENT ON INDEX uq_usuario_ambito_activo_unico IS 'Regla del prototipo: cada usuario solo puede tener un ambito institucional activo vigente.';
 
 CREATE TABLE alertamiento_vehicular (
     id_alertamiento BIGSERIAL PRIMARY KEY,
@@ -258,7 +272,6 @@ INSERT INTO catalogo_evento_auditoria (id_evento_auditoria, nombre_evento, descr
     (4, 'LOGIN', 'Inicio de sesion')
 ON CONFLICT (id_evento_auditoria) DO NOTHING;
 
-SELECT setval(pg_get_serial_sequence('nivel_operativo', 'id_nivel_operativo'), COALESCE((SELECT MAX(id_nivel_operativo) FROM nivel_operativo), 1), TRUE);
 SELECT setval(pg_get_serial_sequence('rol_sistema', 'id_rol'), COALESCE((SELECT MAX(id_rol) FROM rol_sistema), 1), TRUE);
 SELECT setval(pg_get_serial_sequence('estatus_alertamiento', 'id_estatus_alertamiento'), COALESCE((SELECT MAX(id_estatus_alertamiento) FROM estatus_alertamiento), 1), TRUE);
 SELECT setval(pg_get_serial_sequence('catalogo_evento_auditoria', 'id_evento_auditoria'), COALESCE((SELECT MAX(id_evento_auditoria) FROM catalogo_evento_auditoria), 1), TRUE);
@@ -291,7 +304,7 @@ JOIN usuario_ambito ua ON ua.id_usuario = u.id_usuario AND ua.activo = TRUE
 JOIN nivel_operativo nv ON nv.id_nivel_operativo = ua.id_nivel_operativo;
 
 CREATE OR REPLACE VIEW vw_alertamiento_contexto AS
-SELECT a.id_alertamiento, a.folio_alertamiento, a.placa_detectada, a.fecha_hora_deteccion, a.id_estatus_alertamiento, t.id_torre, t.nombre_torre, c.id_central, c.nombre_central, r.id_region, r.nombre_region, e.id_estado, e.nombre_estado, toper.id_territorio, toper.nombre_territorio
+SELECT a.id_alertamiento, a.folio_alertamiento, a.placa_detectada, a.fecha_hora_deteccion, a.id_estatus_alertamiento, t.id_torre, t.nombre_torre, t.activo AS torre_activa, c.id_central, c.nombre_central, c.activo AS central_activa, r.id_region, r.nombre_region, r.activo AS region_activa, e.id_estado, e.nombre_estado, e.activo AS estado_activo, toper.id_territorio, toper.nombre_territorio, toper.activo AS territorio_activo
 FROM alertamiento_vehicular a
 JOIN torre_tidv t ON t.id_torre = a.id_torre
 JOIN central_operativa c ON c.id_central = t.id_central
@@ -299,3 +312,5 @@ JOIN region_operativa r ON r.id_region = c.id_region
 JOIN estado e ON e.id_estado = t.id_estado
 LEFT JOIN territorio_estado te ON te.id_estado = e.id_estado AND te.activo = TRUE
 LEFT JOIN territorio_operativo toper ON toper.id_territorio = te.id_territorio;
+COMMENT ON VIEW vw_alertamiento_contexto IS 'Vista historica de alertamientos con contexto operativo y banderas de vigencia institucional.';
+
