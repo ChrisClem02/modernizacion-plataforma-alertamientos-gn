@@ -40,6 +40,19 @@ services:
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
 
+  frontend_mpna_gn:
+    build:
+      context: ./frontend
+    container_name: mpna_gn_frontend
+    restart: unless-stopped
+    depends_on:
+      backend_mpna_gn:
+        condition: service_started
+    environment:
+      VITE_API_BASE_URL: http://localhost:${BACKEND_PORT}/api
+    ports:
+      - "${FRONTEND_PORT}:5173"
+
 volumes:
   mpna_gn_postgres_data:
     name: mpna_gn_postgres_data
