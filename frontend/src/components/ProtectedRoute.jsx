@@ -4,15 +4,15 @@ import { useAuthStore } from '../store/auth.store';
 
 function ProtectedRoute() {
     const location = useLocation();
-    const { token, user, isBootstrapped, isLoading } = useAuthStore((state) => ({
+    const { token, user, isBootstrapped, isHydratingSession } = useAuthStore((state) => ({
         token: state.token,
         user: state.user,
         isBootstrapped: state.isBootstrapped,
-        isLoading: state.isLoading
+        isHydratingSession: state.isHydratingSession
     }));
 
     // Mientras se reconstruye la sesion no conviene redirigir aun.
-    if (!isBootstrapped || isLoading) {
+    if (!isBootstrapped || isHydratingSession) {
         return (
             <div className="page-shell">
                 <div className="card card--narrow loading-state">

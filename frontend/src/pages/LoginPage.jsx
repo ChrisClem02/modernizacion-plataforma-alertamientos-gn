@@ -4,10 +4,12 @@ import { useAuthStore } from '../store/auth.store';
 
 function LoginPage() {
     const navigate = useNavigate();
-    const { login, token, user, isLoading, errorMessage } = useAuthStore((state) => ({
+    const { login, token, user, isBootstrapped, isHydratingSession, isLoading, errorMessage } = useAuthStore((state) => ({
         login: state.login,
         token: state.token,
         user: state.user,
+        isBootstrapped: state.isBootstrapped,
+        isHydratingSession: state.isHydratingSession,
         isLoading: state.isLoading,
         errorMessage: state.errorMessage
     }));
@@ -17,12 +19,12 @@ function LoginPage() {
         contrasena: ''
     });
 
-    // Si ya existe sesion valida, no tiene sentido mostrar otra vez el login.
+    // Solo se redirige cuando la sesion ya fue validada contra el backend.
     useEffect(() => {
-        if (token && user) {
+        if (isBootstrapped && token && user) {
             navigate('/dashboard', { replace: true });
         }
-    }, [navigate, token, user]);
+    }, [isBootstrapped, navigate, token, user]);
 
     function handleChange(event) {
         const { name, value } = event.target;
@@ -51,6 +53,12 @@ function LoginPage() {
                 <p className="subtitle">
                     Frontend minimo para validar la autenticacion institucional contra el backend.
                 </p>
+
+                {isHydratingSession ? (
+                    <p className="subtitle">
+                        Validando una sesion almacenada antes de mostrar el formulario.
+                    </p>
+                ) : null}
 
                 <form className="form-grid" onSubmit={handleSubmit}>
                     <div className="field">
@@ -82,7 +90,7 @@ function LoginPage() {
                     {errorMessage ? <p className="message">{errorMessage}</p> : null}
 
                     <div className="button-row">
-                        <button className="button" type="submit" disabled={isLoading}>
+                        <button className="button" type="submit" disabled={isLoading || isHydratingSession}>
                             {isLoading ? 'Ingresando...' : 'Ingresar'}
                         </button>
                     </div>

@@ -15,6 +15,7 @@ const initialAuthState = {
     token: null,
     user: null,
     isBootstrapped: false,
+    isHydratingSession: false,
     isLoading: false,
     errorMessage: null
 };
@@ -23,7 +24,7 @@ export const useAuthStore = create((set, get) => ({
     ...initialAuthState,
 
     hydrateAuth: async () => {
-        if (get().isBootstrapped) {
+        if (get().isBootstrapped || get().isHydratingSession) {
             return;
         }
 
@@ -31,15 +32,18 @@ export const useAuthStore = create((set, get) => ({
 
         if (!storedSession?.token) {
             set({
-                isBootstrapped: true
+                isBootstrapped: true,
+                isHydratingSession: false
             });
             return;
         }
 
         set({
             token: storedSession.token,
-            user: storedSession.user || null,
-            isLoading: true,
+            // No se confia en el usuario persistido hasta validarlo contra
+            // el backend. Asi evitamos redirecciones con sesiones caducadas.
+            user: null,
+            isHydratingSession: true,
             errorMessage: null
         });
 
@@ -54,6 +58,7 @@ export const useAuthStore = create((set, get) => ({
                 token: storedSession.token,
                 user: response.user,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 isLoading: false,
                 errorMessage: null
             });
@@ -62,6 +67,7 @@ export const useAuthStore = create((set, get) => ({
             set({
                 ...initialAuthState,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 errorMessage: 'La sesion almacenada ya no es valida.'
             });
         }
@@ -70,6 +76,7 @@ export const useAuthStore = create((set, get) => ({
     login: async ({ nombre_usuario, contrasena }) => {
         set({
             isLoading: true,
+            isHydratingSession: false,
             errorMessage: null
         });
 
@@ -88,6 +95,7 @@ export const useAuthStore = create((set, get) => ({
                 token: response.access_token,
                 user: response.user,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 isLoading: false,
                 errorMessage: null
             });
@@ -101,6 +109,7 @@ export const useAuthStore = create((set, get) => ({
                 token: null,
                 user: null,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 isLoading: false,
                 errorMessage: message
             });
@@ -118,6 +127,7 @@ export const useAuthStore = create((set, get) => ({
 
         set({
             isLoading: true,
+            isHydratingSession: false,
             errorMessage: null
         });
 
@@ -133,6 +143,7 @@ export const useAuthStore = create((set, get) => ({
                 token: currentToken,
                 user: response.user,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 isLoading: false,
                 errorMessage: null
             });
@@ -145,6 +156,7 @@ export const useAuthStore = create((set, get) => ({
             set({
                 ...initialAuthState,
                 isBootstrapped: true,
+                isHydratingSession: false,
                 errorMessage: message
             });
 
