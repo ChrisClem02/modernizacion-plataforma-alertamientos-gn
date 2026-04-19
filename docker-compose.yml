@@ -1,4 +1,4 @@
-﻿services:
+services:
   postgres_mpna_gn:
     image: postgres:${POSTGRES_VERSION}
     container_name: mpna_gn_postgres
@@ -17,6 +17,26 @@
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend_mpna_gn:
+    build:
+      context: ./backend
+    container_name: mpna_gn_backend
+    restart: unless-stopped
+    depends_on:
+      postgres_mpna_gn:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      BACKEND_PORT: ${BACKEND_PORT}
+      DB_HOST: postgres_mpna_gn
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CORS_ORIGIN: http://localhost:${FRONTEND_PORT}
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
 
 volumes:
   mpna_gn_postgres_data:
