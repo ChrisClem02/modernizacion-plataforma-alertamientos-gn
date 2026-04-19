@@ -14,6 +14,8 @@ Este proyecto se creo fuera de OneDrive para evitar bloqueos con Git y Docker:
 - Esquema SQL inicial en `initdb/001_schema_v2_1.sql`
 - Repo Git local limpio
 - Archivo `.env.example` para replicar el entorno en otra laptop
+- Documentacion tecnica en `docs/base_datos_tesis.md`
+- Diagrama E-R en Mermaid en `docs/diagrama_er_mermaid.md`
 
 ## Primer arranque local
 

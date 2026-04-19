@@ -96,6 +96,7 @@ CREATE TABLE region_operativa (
 CREATE TABLE central_operativa (
     id_central BIGSERIAL PRIMARY KEY,
     id_region SMALLINT NOT NULL REFERENCES region_operativa (id_region) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    id_estado_sede SMALLINT NOT NULL REFERENCES estado (id_estado) ON UPDATE RESTRICT ON DELETE RESTRICT,
     nombre_central VARCHAR(150) NOT NULL,
     descripcion VARCHAR(300),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -105,6 +106,9 @@ CREATE TABLE central_operativa (
     CONSTRAINT chk_central_nombre CHECK (btrim(nombre_central) <> '')
 );
 CREATE INDEX idx_central_region ON central_operativa (id_region);
+CREATE INDEX idx_central_estado_sede ON central_operativa (id_estado_sede);
+COMMENT ON TABLE central_operativa IS 'Central operativa dentro de una region. Puede existir aun sin torres asociadas.';
+COMMENT ON COLUMN central_operativa.id_estado_sede IS 'Estado sede o ubicacion administrativa de la central. No reemplaza el estado operativo de las torres.';
 
 CREATE TABLE torre_tidv (
     id_torre BIGSERIAL PRIMARY KEY,
@@ -228,6 +232,7 @@ CREATE TABLE historial_alertamiento (
 );
 CREATE INDEX idx_historial_alertamiento_alertamiento ON historial_alertamiento (id_alertamiento);
 CREATE INDEX idx_historial_alertamiento_fecha ON historial_alertamiento (fecha_evento DESC);
+COMMENT ON TABLE historial_alertamiento IS 'Bitacora cronologica de cambios de estatus de cada alertamiento.';
 
 CREATE TABLE bitacora_auditoria (
     id_bitacora_auditoria BIGSERIAL PRIMARY KEY,
@@ -244,6 +249,7 @@ CREATE TABLE bitacora_auditoria (
 );
 CREATE INDEX idx_bitacora_tabla_fecha ON bitacora_auditoria (nombre_tabla, fecha_evento DESC);
 CREATE INDEX idx_bitacora_usuario_fecha ON bitacora_auditoria (id_usuario, fecha_evento DESC);
+COMMENT ON TABLE bitacora_auditoria IS 'Registro forense de inserciones, actualizaciones y eliminaciones sobre tablas criticas.';
 
 INSERT INTO nivel_operativo (id_nivel_operativo, nombre_nivel, descripcion, jerarquia_orden) VALUES
     (1, 'TORRE', 'Visibilidad limitada a la torre asignada.', 1),
@@ -286,6 +292,174 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION fn_get_current_app_user_id()
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_user_id TEXT;
+BEGIN
+    v_user_id := current_setting('app.current_user_id', TRUE);
+
+    IF v_user_id IS NULL OR btrim(v_user_id) = '' THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN v_user_id::BIGINT;
+EXCEPTION
+    WHEN invalid_text_representation THEN
+        RETURN NULL;
+END;
+$$;
+COMMENT ON FUNCTION fn_get_current_app_user_id() IS 'Obtiene el id_usuario de la sesion cuando la aplicacion establece app.current_user_id.';
+
+CREATE OR REPLACE FUNCTION fn_registrar_historial_alertamiento()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id_usuario BIGINT;
+BEGIN
+    v_id_usuario := fn_get_current_app_user_id();
+
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO historial_alertamiento (
+            id_alertamiento,
+            id_estatus_alertamiento,
+            id_usuario,
+            observaciones
+        )
+        VALUES (
+            NEW.id_alertamiento,
+            NEW.id_estatus_alertamiento,
+            COALESCE(v_id_usuario, NEW.id_usuario_creador),
+            'Registro inicial del alertamiento.'
+        );
+
+        RETURN NEW;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND NEW.id_estatus_alertamiento IS DISTINCT FROM OLD.id_estatus_alertamiento THEN
+        INSERT INTO historial_alertamiento (
+            id_alertamiento,
+            id_estatus_alertamiento,
+            id_usuario,
+            observaciones
+        )
+        VALUES (
+            NEW.id_alertamiento,
+            NEW.id_estatus_alertamiento,
+            v_id_usuario,
+            'Cambio de estatus del alertamiento.'
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+COMMENT ON FUNCTION fn_registrar_historial_alertamiento() IS 'Registra automaticamente el historial inicial y los cambios de estatus de cada alertamiento.';
+
+CREATE OR REPLACE FUNCTION fn_registrar_bitacora_auditoria()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id_evento_auditoria SMALLINT;
+    v_id_usuario BIGINT;
+    v_pk_columna TEXT;
+    v_datos_anteriores JSONB;
+    v_datos_nuevos JSONB;
+    v_id_registro TEXT;
+BEGIN
+    v_id_usuario := fn_get_current_app_user_id();
+    v_pk_columna := TG_ARGV[0];
+
+    SELECT id_evento_auditoria
+      INTO v_id_evento_auditoria
+      FROM catalogo_evento_auditoria
+     WHERE nombre_evento = TG_OP
+     ORDER BY id_evento_auditoria
+     LIMIT 1;
+
+    IF TG_OP = 'INSERT' THEN
+        v_datos_nuevos := to_jsonb(NEW);
+        v_id_registro := COALESCE(v_datos_nuevos ->> v_pk_columna, 'SIN_ID');
+
+        INSERT INTO bitacora_auditoria (
+            id_usuario,
+            id_evento_auditoria,
+            nombre_tabla,
+            id_registro,
+            datos_anteriores,
+            datos_nuevos
+        )
+        VALUES (
+            v_id_usuario,
+            v_id_evento_auditoria,
+            TG_TABLE_NAME,
+            v_id_registro,
+            NULL,
+            v_datos_nuevos
+        );
+
+        RETURN NEW;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        v_datos_anteriores := to_jsonb(OLD);
+        v_datos_nuevos := to_jsonb(NEW);
+
+        IF (v_datos_anteriores - 'fecha_actualizacion') IS NOT DISTINCT FROM (v_datos_nuevos - 'fecha_actualizacion') THEN
+            RETURN NEW;
+        END IF;
+
+        v_id_registro := COALESCE(v_datos_nuevos ->> v_pk_columna, v_datos_anteriores ->> v_pk_columna, 'SIN_ID');
+
+        INSERT INTO bitacora_auditoria (
+            id_usuario,
+            id_evento_auditoria,
+            nombre_tabla,
+            id_registro,
+            datos_anteriores,
+            datos_nuevos
+        )
+        VALUES (
+            v_id_usuario,
+            v_id_evento_auditoria,
+            TG_TABLE_NAME,
+            v_id_registro,
+            v_datos_anteriores,
+            v_datos_nuevos
+        );
+
+        RETURN NEW;
+    END IF;
+
+    v_datos_anteriores := to_jsonb(OLD);
+    v_id_registro := COALESCE(v_datos_anteriores ->> v_pk_columna, 'SIN_ID');
+
+    INSERT INTO bitacora_auditoria (
+        id_usuario,
+        id_evento_auditoria,
+        nombre_tabla,
+        id_registro,
+        datos_anteriores,
+        datos_nuevos
+    )
+    VALUES (
+        v_id_usuario,
+        v_id_evento_auditoria,
+        TG_TABLE_NAME,
+        v_id_registro,
+        v_datos_anteriores,
+        NULL
+    );
+
+    RETURN OLD;
+END;
+$$;
+COMMENT ON FUNCTION fn_registrar_bitacora_auditoria() IS 'Registra inserciones, actualizaciones y eliminaciones en bitacora_auditoria para tablas criticas.';
+
 CREATE TRIGGER trg_estado_fecha_actualizacion BEFORE UPDATE ON estado FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
 CREATE TRIGGER trg_territorio_operativo_fecha_actualizacion BEFORE UPDATE ON territorio_operativo FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
 CREATE TRIGGER trg_territorio_estado_fecha_actualizacion BEFORE UPDATE ON territorio_estado FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
@@ -295,6 +469,13 @@ CREATE TRIGGER trg_torre_tidv_fecha_actualizacion BEFORE UPDATE ON torre_tidv FO
 CREATE TRIGGER trg_usuario_fecha_actualizacion BEFORE UPDATE ON usuario FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
 CREATE TRIGGER trg_usuario_ambito_fecha_actualizacion BEFORE UPDATE ON usuario_ambito FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
 CREATE TRIGGER trg_alertamiento_vehicular_fecha_actualizacion BEFORE UPDATE ON alertamiento_vehicular FOR EACH ROW EXECUTE FUNCTION fn_set_fecha_actualizacion();
+CREATE TRIGGER trg_alertamiento_historial_insert AFTER INSERT ON alertamiento_vehicular FOR EACH ROW EXECUTE FUNCTION fn_registrar_historial_alertamiento();
+CREATE TRIGGER trg_alertamiento_historial_update AFTER UPDATE OF id_estatus_alertamiento ON alertamiento_vehicular FOR EACH ROW EXECUTE FUNCTION fn_registrar_historial_alertamiento();
+CREATE TRIGGER trg_central_operativa_bitacora AFTER INSERT OR UPDATE OR DELETE ON central_operativa FOR EACH ROW EXECUTE FUNCTION fn_registrar_bitacora_auditoria('id_central');
+CREATE TRIGGER trg_torre_tidv_bitacora AFTER INSERT OR UPDATE OR DELETE ON torre_tidv FOR EACH ROW EXECUTE FUNCTION fn_registrar_bitacora_auditoria('id_torre');
+CREATE TRIGGER trg_usuario_bitacora AFTER INSERT OR UPDATE OR DELETE ON usuario FOR EACH ROW EXECUTE FUNCTION fn_registrar_bitacora_auditoria('id_usuario');
+CREATE TRIGGER trg_usuario_ambito_bitacora AFTER INSERT OR UPDATE OR DELETE ON usuario_ambito FOR EACH ROW EXECUTE FUNCTION fn_registrar_bitacora_auditoria('id_usuario_ambito');
+CREATE TRIGGER trg_alertamiento_bitacora AFTER INSERT OR UPDATE OR DELETE ON alertamiento_vehicular FOR EACH ROW EXECUTE FUNCTION fn_registrar_bitacora_auditoria('id_alertamiento');
 
 CREATE OR REPLACE VIEW vw_usuario_visibilidad_institucional AS
 SELECT u.id_usuario, u.nombre_usuario, r.nombre_rol, nv.nombre_nivel AS nivel_visibilidad, ua.id_torre, ua.id_estado, ua.id_territorio, ua.ambito_nacional, ua.activo
@@ -303,13 +484,21 @@ JOIN rol_sistema r ON r.id_rol = u.id_rol
 JOIN usuario_ambito ua ON ua.id_usuario = u.id_usuario AND ua.activo = TRUE
 JOIN nivel_operativo nv ON nv.id_nivel_operativo = ua.id_nivel_operativo;
 
+CREATE OR REPLACE VIEW vw_central_contexto AS
+SELECT c.id_central, c.nombre_central, c.activo AS central_activa, r.id_region, r.nombre_region, r.activo AS region_activa, e.id_estado AS id_estado_sede, e.nombre_estado AS nombre_estado_sede, e.activo AS estado_sede_activo
+FROM central_operativa c
+JOIN region_operativa r ON r.id_region = c.id_region
+JOIN estado e ON e.id_estado = c.id_estado_sede;
+COMMENT ON VIEW vw_central_contexto IS 'Vista de centrales operativas con region y estado sede, incluso cuando no existen torres asociadas.';
+
 CREATE OR REPLACE VIEW vw_alertamiento_contexto AS
-SELECT a.id_alertamiento, a.folio_alertamiento, a.placa_detectada, a.fecha_hora_deteccion, a.id_estatus_alertamiento, t.id_torre, t.nombre_torre, t.activo AS torre_activa, c.id_central, c.nombre_central, c.activo AS central_activa, r.id_region, r.nombre_region, r.activo AS region_activa, e.id_estado, e.nombre_estado, e.activo AS estado_activo, toper.id_territorio, toper.nombre_territorio, toper.activo AS territorio_activo
+SELECT a.id_alertamiento, a.folio_alertamiento, a.placa_detectada, a.fecha_hora_deteccion, a.id_estatus_alertamiento, t.id_torre, t.nombre_torre, t.activo AS torre_activa, c.id_central, c.nombre_central, c.id_estado_sede, esede.nombre_estado AS nombre_estado_sede, c.activo AS central_activa, r.id_region, r.nombre_region, r.activo AS region_activa, e.id_estado, e.nombre_estado, e.activo AS estado_activo, toper.id_territorio, toper.nombre_territorio, toper.activo AS territorio_activo
 FROM alertamiento_vehicular a
 JOIN torre_tidv t ON t.id_torre = a.id_torre
 JOIN central_operativa c ON c.id_central = t.id_central
 JOIN region_operativa r ON r.id_region = c.id_region
 JOIN estado e ON e.id_estado = t.id_estado
+JOIN estado esede ON esede.id_estado = c.id_estado_sede
 LEFT JOIN territorio_estado te ON te.id_estado = e.id_estado AND te.activo = TRUE
 LEFT JOIN territorio_operativo toper ON toper.id_territorio = te.id_territorio;
 COMMENT ON VIEW vw_alertamiento_contexto IS 'Vista historica de alertamientos con contexto operativo y banderas de vigencia institucional.';
