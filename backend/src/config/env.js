@@ -38,7 +38,9 @@ const env = Object.freeze({
     DB_NAME: getRequiredEnv('DB_NAME'),
     DB_USER: getRequiredEnv('DB_USER'),
     DB_PASSWORD: getRequiredEnv('DB_PASSWORD'),
-    CORS_ORIGIN: process.env.CORS_ORIGIN?.trim() || '*'
+    CORS_ORIGIN: process.env.CORS_ORIGIN?.trim() || '*',
+    JWT_SECRET: getRequiredEnv('JWT_SECRET'),
+    JWT_EXPIRES_IN: getRequiredEnv('JWT_EXPIRES_IN')
 });
 
 module.exports = env;

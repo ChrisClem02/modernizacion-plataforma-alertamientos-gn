@@ -5,7 +5,8 @@ function requireRoles(...allowedRoles) {
     const normalizedAllowedRoles = allowedRoles.map((role) => String(role).trim().toUpperCase());
 
     return function roleMiddleware(req, res, next) {
-        const currentRole = req.authContext?.role;
+        const currentRole = req.user?.rol?.nombre_rol || req.authContext?.role || null;
+        const currentRoleId = req.user?.id_rol ? String(req.user.id_rol).toUpperCase() : null;
 
         if (!currentRole) {
             return res.status(401).json({
@@ -13,7 +14,7 @@ function requireRoles(...allowedRoles) {
             });
         }
 
-        if (!normalizedAllowedRoles.includes(currentRole)) {
+        if (!normalizedAllowedRoles.includes(currentRole) && !normalizedAllowedRoles.includes(currentRoleId)) {
             return res.status(403).json({
                 message: 'El rol autenticado no tiene permiso para acceder a este recurso.'
             });
