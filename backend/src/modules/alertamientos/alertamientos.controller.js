@@ -3,6 +3,12 @@
 // respuestas JSON sin meter logica de negocio en la capa de transporte.
 const alertamientosService = require('./alertamientos.service');
 
+async function createManualAlertamiento(req, res) {
+    const response = await alertamientosService.createManualAlertamiento(req.body, req.user);
+
+    return res.status(201).json(response);
+}
+
 async function listAlertamientos(req, res) {
     const response = await alertamientosService.listAlertamientos({
         userContext: req.user,
@@ -34,6 +40,7 @@ async function getAlertamientoHistorialById(req, res) {
 }
 
 module.exports = {
+    createManualAlertamiento,
     listAlertamientos,
     getAlertamientoById,
     getAlertamientoHistorialById

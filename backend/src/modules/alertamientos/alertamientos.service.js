@@ -1,4 +1,4 @@
-const { query } = require('../../config/db');
+const { pool, query } = require('../../config/db');
 const { createHttpError } = require('../../middlewares/error.middleware');
 
 // El listado se apoya en la vista historica porque ya concentra el contexto
@@ -82,6 +82,70 @@ const ALERTAMIENTO_HISTORIAL_QUERY = `
     ORDER BY h.fecha_evento ASC, h.id_historial_alertamiento ASC
 `;
 
+// El estatus inicial no se hardcodea desde Node: se resuelve por nombre en el
+// catalogo congelado para mantener la semantica institucional en PostgreSQL.
+const ESTATUS_DETECTADO_QUERY = `
+    SELECT id_estatus_alertamiento
+    FROM estatus_alertamiento
+    WHERE nombre_estatus = 'DETECTADO'
+    ORDER BY id_estatus_alertamiento
+    LIMIT 1
+`;
+
+// Esta consulta resuelve la torre destino junto con su contexto operativo y
+// territorial vigente. Se usa para autorizar el alta manual antes del INSERT.
+const TORRE_CONTEXT_FOR_INSERT_QUERY = `
+    SELECT
+        t.id_torre,
+        t.nombre_torre,
+        t.codigo_torre,
+        t.id_estado,
+        e.nombre_estado,
+        te.id_territorio,
+        toper.nombre_territorio,
+        c.id_central,
+        c.nombre_central,
+        r.id_region,
+        r.nombre_region
+    FROM torre_tidv t
+    JOIN central_operativa c
+      ON c.id_central = t.id_central
+    JOIN region_operativa r
+      ON r.id_region = c.id_region
+    JOIN estado e
+      ON e.id_estado = t.id_estado
+    LEFT JOIN territorio_estado te
+      ON te.id_estado = e.id_estado
+     AND te.activo = TRUE
+    LEFT JOIN territorio_operativo toper
+      ON toper.id_territorio = te.id_territorio
+    WHERE t.id_torre = $1
+      AND t.activo = TRUE
+      AND c.activo = TRUE
+      AND r.activo = TRUE
+    LIMIT 1
+`;
+
+const INSERT_MANUAL_ALERTAMIENTO_QUERY = `
+    INSERT INTO alertamiento_vehicular (
+        id_torre,
+        id_estatus_alertamiento,
+        id_usuario_creador,
+        placa_detectada,
+        fecha_hora_deteccion,
+        latitud_deteccion,
+        longitud_deteccion,
+        carril,
+        sentido_vial,
+        origen_registro,
+        observaciones
+    )
+    VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'MANUAL', $10
+    )
+    RETURNING id_alertamiento
+`;
+
 function parsePositiveInteger(rawValue, fieldName) {
     if (rawValue === undefined || rawValue === null || rawValue === '') {
         return null;
@@ -96,6 +160,16 @@ function parsePositiveInteger(rawValue, fieldName) {
     return numericValue;
 }
 
+function parseRequiredPositiveInteger(rawValue, fieldName) {
+    const numericValue = parsePositiveInteger(rawValue, fieldName);
+
+    if (numericValue === null) {
+        throw createHttpError(400, `${fieldName} es obligatorio.`);
+    }
+
+    return numericValue;
+}
+
 function normalizePlate(rawValue) {
     if (typeof rawValue !== 'string') {
         return null;
@@ -103,6 +177,16 @@ function normalizePlate(rawValue) {
 
     const normalizedValue = rawValue.trim().toUpperCase();
     return normalizedValue ? normalizedValue : null;
+}
+
+function normalizeRequiredPlate(rawValue) {
+    const normalizedValue = normalizePlate(rawValue);
+
+    if (!normalizedValue) {
+        throw createHttpError(400, 'placa_detectada es obligatoria.');
+    }
+
+    return normalizedValue;
 }
 
 function parseTimestampFilter(rawValue, fieldName, mode) {
@@ -126,6 +210,68 @@ function parseTimestampFilter(rawValue, fieldName, mode) {
     }
 
     return parsedDate.toISOString();
+}
+
+function parseRequiredDetectionTimestamp(rawValue, fieldName) {
+    if (typeof rawValue !== 'string' || rawValue.trim() === '') {
+        throw createHttpError(400, `${fieldName} es obligatorio.`);
+    }
+
+    const normalizedValue = rawValue.trim();
+
+    // Para altas manuales conviene exigir fecha y hora, no solo fecha, para no
+    // perder precision operativa en el registro inicial.
+    if (!/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(normalizedValue)) {
+        throw createHttpError(400, `${fieldName} debe incluir fecha y hora validas.`);
+    }
+
+    const parsedDate = new Date(normalizedValue);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        throw createHttpError(400, `${fieldName} debe ser una fecha valida.`);
+    }
+
+    return normalizedValue;
+}
+
+function parseOptionalCoordinate(rawValue, fieldName, minValue, maxValue) {
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+        return null;
+    }
+
+    const numericValue = Number.parseFloat(rawValue);
+
+    if (Number.isNaN(numericValue)) {
+        throw createHttpError(400, `${fieldName} debe ser numerico.`);
+    }
+
+    if (numericValue < minValue || numericValue > maxValue) {
+        throw createHttpError(400, `${fieldName} debe estar entre ${minValue} y ${maxValue}.`);
+    }
+
+    return numericValue;
+}
+
+function normalizeOptionalText(rawValue, fieldName, maxLength) {
+    if (rawValue === undefined || rawValue === null) {
+        return null;
+    }
+
+    if (typeof rawValue !== 'string') {
+        throw createHttpError(400, `${fieldName} debe ser texto.`);
+    }
+
+    const normalizedValue = rawValue.trim();
+
+    if (normalizedValue === '') {
+        return null;
+    }
+
+    if (normalizedValue.length > maxLength) {
+        throw createHttpError(400, `${fieldName} no puede exceder ${maxLength} caracteres.`);
+    }
+
+    return normalizedValue;
 }
 
 function parsePagination(queryParams) {
@@ -173,9 +319,101 @@ function getUserVisibilityContext(userContext) {
     };
 }
 
+function normalizeManualAlertamientoPayload(payload) {
+    return {
+        id_torre: parseRequiredPositiveInteger(payload.id_torre, 'id_torre'),
+        placa_detectada: normalizeRequiredPlate(payload.placa_detectada),
+        fecha_hora_deteccion: parseRequiredDetectionTimestamp(
+            payload.fecha_hora_deteccion,
+            'fecha_hora_deteccion'
+        ),
+        latitud_deteccion: parseOptionalCoordinate(
+            payload.latitud_deteccion,
+            'latitud_deteccion',
+            -90,
+            90
+        ),
+        longitud_deteccion: parseOptionalCoordinate(
+            payload.longitud_deteccion,
+            'longitud_deteccion',
+            -180,
+            180
+        ),
+        carril: normalizeOptionalText(payload.carril, 'carril', 20),
+        sentido_vial: normalizeOptionalText(payload.sentido_vial, 'sentido_vial', 20),
+        observaciones: normalizeOptionalText(payload.observaciones, 'observaciones', 500)
+    };
+}
+
 function appendClause(clauses, params, sqlExpression, value) {
     params.push(value);
     clauses.push(`${sqlExpression} $${params.length}`);
+}
+
+function assertRegistrationVisibilityForTower(userContext, towerContext) {
+    const visibilityContext = getUserVisibilityContext(userContext);
+
+    if (visibilityContext.nivel_operativo === 'NACIONAL') {
+        return towerContext;
+    }
+
+    if (visibilityContext.nivel_operativo === 'TORRE') {
+        if (Number(towerContext.id_torre) === Number(visibilityContext.ambito.referencia?.id_torre)) {
+            return towerContext;
+        }
+
+        throw createHttpError(
+            403,
+            'El usuario autenticado no tiene visibilidad para registrar alertamientos sobre la torre indicada.'
+        );
+    }
+
+    if (visibilityContext.nivel_operativo === 'ESTATAL') {
+        if (Number(towerContext.id_estado) === Number(visibilityContext.ambito.referencia?.id_estado)) {
+            return towerContext;
+        }
+
+        throw createHttpError(
+            403,
+            'El usuario autenticado no tiene visibilidad para registrar alertamientos sobre la torre indicada.'
+        );
+    }
+
+    if (visibilityContext.nivel_operativo === 'TERRITORIAL') {
+        if (Number(towerContext.id_territorio) === Number(visibilityContext.ambito.referencia?.id_territorio)) {
+            return towerContext;
+        }
+
+        throw createHttpError(
+            403,
+            'El usuario autenticado no tiene visibilidad para registrar alertamientos sobre la torre indicada.'
+        );
+    }
+
+    throw createHttpError(403, 'El nivel operativo del usuario no es reconocido por el modulo de alertamientos.');
+}
+
+async function getDetectedStatusId(client) {
+    const result = await client.query(ESTATUS_DETECTADO_QUERY);
+
+    if (result.rowCount === 0) {
+        throw createHttpError(
+            500,
+            'No fue posible resolver el estatus inicial DETECTADO desde el catalogo institucional.'
+        );
+    }
+
+    return result.rows[0].id_estatus_alertamiento;
+}
+
+async function getOperativeTowerContextById(client, towerId) {
+    const result = await client.query(TORRE_CONTEXT_FOR_INSERT_QUERY, [towerId]);
+
+    if (result.rowCount === 0) {
+        throw createHttpError(404, 'La torre indicada no existe o no se encuentra operativa.');
+    }
+
+    return result.rows[0];
 }
 
 function applyVisibilityClauses(clauses, params, userContext) {
@@ -488,8 +726,61 @@ async function getVisibleAlertamientoHistorialById(alertamientoId, userContext) 
     };
 }
 
+async function createManualAlertamiento(payload, userContext) {
+    const normalizedPayload = normalizeManualAlertamientoPayload(payload || {});
+    const creatorUserId = parseRequiredPositiveInteger(userContext?.id_usuario, 'id_usuario_autenticado');
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // El contexto se propaga directo desde esta transaccion para que los
+        // triggers de historial y auditoria registren al usuario autenticado.
+        await client.query(
+            'SELECT set_config($1, $2, true)',
+            ['app.current_user_id', String(creatorUserId)]
+        );
+
+        const detectedStatusId = await getDetectedStatusId(client);
+        const towerContext = await getOperativeTowerContextById(client, normalizedPayload.id_torre);
+
+        // La autorizacion se hace contra la torre destino antes del INSERT. De
+        // este modo el backend no depende de que el usuario "se porte bien".
+        assertRegistrationVisibilityForTower(userContext, towerContext);
+
+        const insertResult = await client.query(INSERT_MANUAL_ALERTAMIENTO_QUERY, [
+            normalizedPayload.id_torre,
+            detectedStatusId,
+            creatorUserId,
+            normalizedPayload.placa_detectada,
+            normalizedPayload.fecha_hora_deteccion,
+            normalizedPayload.latitud_deteccion,
+            normalizedPayload.longitud_deteccion,
+            normalizedPayload.carril,
+            normalizedPayload.sentido_vial,
+            normalizedPayload.observaciones
+        ]);
+
+        await client.query('COMMIT');
+
+        const createdAlertamientoId = insertResult.rows[0].id_alertamiento;
+        const detail = await getVisibleAlertamientoDetailById(createdAlertamientoId, userContext);
+
+        return {
+            message: 'Alertamiento manual registrado correctamente.',
+            data: detail
+        };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     listAlertamientos,
     getVisibleAlertamientoDetailById,
-    getVisibleAlertamientoHistorialById
+    getVisibleAlertamientoHistorialById,
+    createManualAlertamiento
 };

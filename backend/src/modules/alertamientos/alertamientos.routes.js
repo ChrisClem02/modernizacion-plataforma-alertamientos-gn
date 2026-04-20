@@ -9,6 +9,10 @@ const router = express.Router();
 // para poder aplicar la visibilidad institucional desde req.user.
 router.use(requireAuthenticatedUser);
 
+// Alta manual de alertamientos. La autorizacion real se resuelve en servicio
+// comparando la torre destino contra el ambito institucional del usuario.
+router.post('/', asyncHandler(alertamientosController.createManualAlertamiento));
+
 // Historial se declara antes del detalle para evitar que Express capture
 // "/:id/historial" como si fuera solo "/:id".
 router.get('/:id/historial', asyncHandler(alertamientosController.getAlertamientoHistorialById));

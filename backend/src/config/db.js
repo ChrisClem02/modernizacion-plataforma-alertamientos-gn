@@ -44,7 +44,13 @@ async function withTransaction(work, options = {}) {
         await client.query('BEGIN');
 
         if (options.userId !== undefined && options.userId !== null) {
-            await client.query('SET LOCAL app.current_user_id = $1', [String(options.userId)]);
+            // PostgreSQL no permite placeholders en SET LOCAL. Se usa
+            // set_config(..., true) para mantener el valor acotado a la
+            // transaccion actual y seguir evitando interpolacion manual.
+            await client.query(
+                'SELECT set_config($1, $2, true)',
+                ['app.current_user_id', String(options.userId)]
+            );
         }
 
         const result = await work(client);
