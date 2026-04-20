@@ -20,6 +20,11 @@ export async function getAlertamientoHistorialRequest(alertamientoId) {
     return response.data;
 }
 
+export async function updateAlertamientoStatusRequest(alertamientoId, payload) {
+    const response = await apiClient.patch(`/alertamientos/${alertamientoId}/estatus`, payload);
+    return response.data;
+}
+
 // La creacion manual se encapsula aqui para mantener el contrato del backend
 // en un solo punto y no repetir rutas dentro de los componentes React.
 export async function createManualAlertamientoRequest(payload) {

@@ -33,10 +33,27 @@ async function checkDatabaseConnection() {
     return result.rows[0];
 }
 
-// Este helper ya deja preparada la forma correcta de propagar el contexto del
-// usuario hacia PostgreSQL. Mas adelante, cuando existan casos de uso reales,
-// los servicios podran reutilizarlo para que auditoria e historial automatico
-// registren el id del usuario de aplicacion.
+function normalizeTransactionUserId(userId) {
+    const numericUserId = Number.parseInt(userId, 10);
+
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        throw new Error('[db] userId invalido para contexto transaccional.');
+    }
+
+    return String(numericUserId);
+}
+
+async function setCurrentAppUserLocal(client, userId) {
+    const normalizedUserId = normalizeTransactionUserId(userId);
+
+    // El valor ya fue reducido a digitos positivos, por lo que la asignacion
+    // es segura y explicita con SET LOCAL dentro de la transaccion actual.
+    await client.query(`SET LOCAL app.current_user_id = '${normalizedUserId}'`);
+}
+
+// Este helper centraliza la forma correcta de propagar el contexto del usuario
+// hacia PostgreSQL para que historial y auditoria automaticos tomen el mismo
+// origen de datos en todos los casos de uso del backend.
 async function withTransaction(work, options = {}) {
     const client = await pool.connect();
 
@@ -44,13 +61,7 @@ async function withTransaction(work, options = {}) {
         await client.query('BEGIN');
 
         if (options.userId !== undefined && options.userId !== null) {
-            // PostgreSQL no permite placeholders en SET LOCAL. Se usa
-            // set_config(..., true) para mantener el valor acotado a la
-            // transaccion actual y seguir evitando interpolacion manual.
-            await client.query(
-                'SELECT set_config($1, $2, true)',
-                ['app.current_user_id', String(options.userId)]
-            );
+            await setCurrentAppUserLocal(client, options.userId);
         }
 
         const result = await work(client);

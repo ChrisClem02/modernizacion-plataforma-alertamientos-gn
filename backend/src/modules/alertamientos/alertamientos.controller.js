@@ -9,6 +9,16 @@ async function createManualAlertamiento(req, res) {
     return res.status(201).json(response);
 }
 
+async function updateAlertamientoStatus(req, res) {
+    const response = await alertamientosService.updateAlertamientoStatus(
+        req.params.id,
+        req.body,
+        req.user
+    );
+
+    return res.status(200).json(response);
+}
+
 async function listAlertamientos(req, res) {
     const response = await alertamientosService.listAlertamientos({
         userContext: req.user,
@@ -41,6 +51,7 @@ async function getAlertamientoHistorialById(req, res) {
 
 module.exports = {
     createManualAlertamiento,
+    updateAlertamientoStatus,
     listAlertamientos,
     getAlertamientoById,
     getAlertamientoHistorialById

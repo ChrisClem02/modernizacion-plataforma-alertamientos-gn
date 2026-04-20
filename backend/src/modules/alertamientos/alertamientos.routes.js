@@ -13,6 +13,10 @@ router.use(requireAuthenticatedUser);
 // comparando la torre destino contra el ambito institucional del usuario.
 router.post('/', asyncHandler(alertamientosController.createManualAlertamiento));
 
+// El cambio de estatus reutiliza el mismo contexto autenticado y deja que
+// PostgreSQL registre historial y auditoria mediante triggers.
+router.patch('/:id/estatus', asyncHandler(alertamientosController.updateAlertamientoStatus));
+
 // Historial se declara antes del detalle para evitar que Express capture
 // "/:id/historial" como si fuera solo "/:id".
 router.get('/:id/historial', asyncHandler(alertamientosController.getAlertamientoHistorialById));

@@ -23,6 +23,7 @@ a {
 
 button,
 input,
+select,
 textarea {
     font: inherit;
 }
@@ -112,6 +113,13 @@ textarea {
     background: #ffffff;
 }
 
+.field select {
+    border: 1px solid #c7d4df;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #ffffff;
+}
+
 .field textarea {
     border: 1px solid #c7d4df;
     border-radius: 12px;
@@ -122,6 +130,7 @@ textarea {
 }
 
 .field input:focus,
+.field select:focus,
 .field textarea:focus {
     outline: 2px solid rgba(15, 93, 115, 0.18);
     border-color: #0f5d73;
@@ -399,6 +408,27 @@ textarea {
 
 .history-section {
     margin-top: 28px;
+}
+
+.status-action-panel {
+    margin-top: 24px;
+    margin-bottom: 24px;
+}
+
+.status-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.status-action-form {
+    display: grid;
+    gap: 16px;
+}
+
+.status-action-note {
+    margin: 0;
+    color: #4f6472;
 }
 
 .timeline {

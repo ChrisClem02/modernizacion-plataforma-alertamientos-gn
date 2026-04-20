@@ -1,4 +1,4 @@
-const { pool, query } = require('../../config/db');
+const { query, withTransaction } = require('../../config/db');
 const { createHttpError } = require('../../middlewares/error.middleware');
 
 // El listado se apoya en la vista historica porque ya concentra el contexto
@@ -145,6 +145,55 @@ const INSERT_MANUAL_ALERTAMIENTO_QUERY = `
     )
     RETURNING id_alertamiento
 `;
+
+const ALERTAMIENTO_STATUS_FOR_UPDATE_BASE_QUERY = `
+    SELECT
+        a.id_alertamiento,
+        a.id_estatus_alertamiento,
+        ea.nombre_estatus,
+        ea.orden_flujo
+    FROM vw_alertamiento_contexto v
+    JOIN alertamiento_vehicular a
+      ON a.id_alertamiento = v.id_alertamiento
+    JOIN estatus_alertamiento ea
+      ON ea.id_estatus_alertamiento = a.id_estatus_alertamiento
+`;
+
+const ESTATUS_BY_ID_QUERY = `
+    SELECT
+        id_estatus_alertamiento,
+        nombre_estatus,
+        orden_flujo
+    FROM estatus_alertamiento
+    WHERE id_estatus_alertamiento = $1
+    LIMIT 1
+`;
+
+const UPDATE_ALERTAMIENTO_STATUS_QUERY = `
+    UPDATE alertamiento_vehicular
+    SET id_estatus_alertamiento = $2
+    WHERE id_alertamiento = $1
+    RETURNING id_alertamiento
+`;
+
+const TERMINAL_ALERTAMIENTO_STATUS = 'CERRADO';
+
+const ALLOWED_ROLE_STATUS_TRANSITIONS = {
+    OPERADOR: new Set([
+        'DETECTADO->VALIDADO',
+        'VALIDADO->EN_ATENCION'
+    ]),
+    COORDINADOR: new Set([
+        'DETECTADO->VALIDADO',
+        'VALIDADO->EN_ATENCION',
+        'EN_ATENCION->CERRADO'
+    ]),
+    ADMINISTRADOR: new Set([
+        'DETECTADO->VALIDADO',
+        'VALIDADO->EN_ATENCION',
+        'EN_ATENCION->CERRADO'
+    ])
+};
 
 function parsePositiveInteger(rawValue, fieldName) {
     if (rawValue === undefined || rawValue === null || rawValue === '') {
@@ -345,6 +394,15 @@ function normalizeManualAlertamientoPayload(payload) {
     };
 }
 
+function normalizeAlertamientoStatusPayload(payload) {
+    return {
+        id_estatus_alertamiento: parseRequiredPositiveInteger(
+            payload?.id_estatus_alertamiento,
+            'id_estatus_alertamiento'
+        )
+    };
+}
+
 function appendClause(clauses, params, sqlExpression, value) {
     params.push(value);
     clauses.push(`${sqlExpression} $${params.length}`);
@@ -416,6 +474,16 @@ async function getOperativeTowerContextById(client, towerId) {
     return result.rows[0];
 }
 
+async function getStatusById(client, statusId) {
+    const result = await client.query(ESTATUS_BY_ID_QUERY, [statusId]);
+
+    if (result.rowCount === 0) {
+        throw createHttpError(400, 'El estatus destino indicado no existe en el catalogo institucional.');
+    }
+
+    return result.rows[0];
+}
+
 function applyVisibilityClauses(clauses, params, userContext) {
     const visibilityContext = getUserVisibilityContext(userContext);
 
@@ -439,6 +507,27 @@ function applyVisibilityClauses(clauses, params, userContext) {
     }
 
     throw createHttpError(403, 'El nivel operativo del usuario no es reconocido por el modulo de alertamientos.');
+}
+
+async function getVisibleAlertamientoStatusForUpdateById(client, alertamientoId, userContext) {
+    const clauses = [];
+    const params = [];
+
+    applyVisibilityClauses(clauses, params, userContext);
+    appendClause(clauses, params, 'v.id_alertamiento =', alertamientoId);
+
+    const result = await client.query(`
+        ${ALERTAMIENTO_STATUS_FOR_UPDATE_BASE_QUERY}
+        ${buildWhereClause(clauses)}
+        LIMIT 1
+        FOR UPDATE OF a
+    `, params);
+
+    if (result.rowCount === 0) {
+        throw createHttpError(404, 'El alertamiento solicitado no existe o no es visible para el usuario autenticado.');
+    }
+
+    return result.rows[0];
 }
 
 function applyFilterClauses(clauses, params, filters, visibilityContext) {
@@ -510,6 +599,20 @@ function buildCreatorFullName(row) {
         row.creador_apellido_paterno,
         row.creador_apellido_materno
     ].filter(Boolean).join(' ');
+}
+
+function normalizeCatalogName(value) {
+    return typeof value === 'string' ? value.trim().toUpperCase() : '';
+}
+
+function getAuthenticatedRoleName(userContext) {
+    const roleName = normalizeCatalogName(userContext?.rol?.nombre_rol);
+
+    if (!roleName) {
+        throw createHttpError(403, 'El usuario autenticado no cuenta con un rol funcional vigente.');
+    }
+
+    return roleName;
 }
 
 function mapAlertamientoListRow(row) {
@@ -629,6 +732,40 @@ function mapHistorialRow(row) {
     };
 }
 
+function assertAlertamientoStatusTransition(currentStatus, nextStatus) {
+    const currentStatusName = normalizeCatalogName(currentStatus?.nombre_estatus);
+
+    if (currentStatusName === TERMINAL_ALERTAMIENTO_STATUS) {
+        throw createHttpError(409, 'No es posible cambiar el estatus de un alertamiento cerrado.');
+    }
+
+    if (Number(currentStatus?.id_estatus_alertamiento) === Number(nextStatus?.id_estatus_alertamiento)) {
+        throw createHttpError(409, 'El alertamiento ya se encuentra en el estatus solicitado.');
+    }
+
+    if (Number(nextStatus?.orden_flujo) !== Number(currentStatus?.orden_flujo) + 1) {
+        throw createHttpError(409, 'El cambio de estatus debe respetar la secuencia operativa del flujo.');
+    }
+}
+
+function assertAlertamientoStatusRole(userContext, currentStatus, nextStatus) {
+    const roleName = getAuthenticatedRoleName(userContext);
+    const allowedTransitions = ALLOWED_ROLE_STATUS_TRANSITIONS[roleName];
+
+    if (!allowedTransitions) {
+        throw createHttpError(403, 'El rol autenticado no tiene permiso para cambiar el estatus del alertamiento.');
+    }
+
+    const transitionKey = `${normalizeCatalogName(currentStatus?.nombre_estatus)}->${normalizeCatalogName(nextStatus?.nombre_estatus)}`;
+
+    if (!allowedTransitions.has(transitionKey)) {
+        throw createHttpError(
+            403,
+            'El rol autenticado no tiene permiso para cambiar el alertamiento al estatus indicado.'
+        );
+    }
+}
+
 async function listAlertamientos(options) {
     const filters = parseAlertamientosFilters(options.filters || {});
     const pagination = parsePagination(options.pagination || {});
@@ -729,18 +866,8 @@ async function getVisibleAlertamientoHistorialById(alertamientoId, userContext) 
 async function createManualAlertamiento(payload, userContext) {
     const normalizedPayload = normalizeManualAlertamientoPayload(payload || {});
     const creatorUserId = parseRequiredPositiveInteger(userContext?.id_usuario, 'id_usuario_autenticado');
-    const client = await pool.connect();
 
-    try {
-        await client.query('BEGIN');
-
-        // El contexto se propaga directo desde esta transaccion para que los
-        // triggers de historial y auditoria registren al usuario autenticado.
-        await client.query(
-            'SELECT set_config($1, $2, true)',
-            ['app.current_user_id', String(creatorUserId)]
-        );
-
+    const createdAlertamientoId = await withTransaction(async (client) => {
         const detectedStatusId = await getDetectedStatusId(client);
         const towerContext = await getOperativeTowerContextById(client, normalizedPayload.id_torre);
 
@@ -761,26 +888,60 @@ async function createManualAlertamiento(payload, userContext) {
             normalizedPayload.observaciones
         ]);
 
-        await client.query('COMMIT');
+        return insertResult.rows[0].id_alertamiento;
+    }, {
+        userId: creatorUserId
+    });
 
-        const createdAlertamientoId = insertResult.rows[0].id_alertamiento;
-        const detail = await getVisibleAlertamientoDetailById(createdAlertamientoId, userContext);
+    const detail = await getVisibleAlertamientoDetailById(createdAlertamientoId, userContext);
 
-        return {
-            message: 'Alertamiento manual registrado correctamente.',
-            data: detail
-        };
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
-    }
+    return {
+        message: 'Alertamiento manual registrado correctamente.',
+        data: detail
+    };
+}
+
+async function updateAlertamientoStatus(alertamientoId, payload, userContext) {
+    const numericAlertamientoId = parseRequiredPositiveInteger(alertamientoId, 'id');
+    const normalizedPayload = normalizeAlertamientoStatusPayload(payload || {});
+    const authenticatedUserId = parseRequiredPositiveInteger(
+        userContext?.id_usuario,
+        'id_usuario_autenticado'
+    );
+
+    const updatedAlertamientoId = await withTransaction(async (client) => {
+        const currentStatus = await getVisibleAlertamientoStatusForUpdateById(
+            client,
+            numericAlertamientoId,
+            userContext
+        );
+        const nextStatus = await getStatusById(client, normalizedPayload.id_estatus_alertamiento);
+
+        assertAlertamientoStatusTransition(currentStatus, nextStatus);
+        assertAlertamientoStatusRole(userContext, currentStatus, nextStatus);
+
+        const updateResult = await client.query(UPDATE_ALERTAMIENTO_STATUS_QUERY, [
+            currentStatus.id_alertamiento,
+            nextStatus.id_estatus_alertamiento
+        ]);
+
+        return updateResult.rows[0].id_alertamiento;
+    }, {
+        userId: authenticatedUserId
+    });
+
+    const detail = await getVisibleAlertamientoDetailById(updatedAlertamientoId, userContext);
+
+    return {
+        message: 'Estatus de alertamiento actualizado correctamente.',
+        data: detail
+    };
 }
 
 module.exports = {
     listAlertamientos,
     getVisibleAlertamientoDetailById,
     getVisibleAlertamientoHistorialById,
-    createManualAlertamiento
+    createManualAlertamiento,
+    updateAlertamientoStatus
 };
