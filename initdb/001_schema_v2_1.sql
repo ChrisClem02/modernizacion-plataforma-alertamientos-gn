@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- =============================================================================
 -- MODELO FISICO BASE
 -- Modernizacion de la Plataforma Nacional de Alertamiento de la Guardia Nacional
--- Version 3
+-- Version 2.1
 -- =============================================================================
 -- Separacion conceptual conservada:
 -- 1. Jerarquia operativa: REGION_OPERATIVA -> CENTRAL_OPERATIVA -> TORRE_TIDV
@@ -502,4 +502,3 @@ JOIN estado esede ON esede.id_estado = c.id_estado_sede
 LEFT JOIN territorio_estado te ON te.id_estado = e.id_estado AND te.activo = TRUE
 LEFT JOIN territorio_operativo toper ON toper.id_territorio = te.id_territorio;
 COMMENT ON VIEW vw_alertamiento_contexto IS 'Vista historica de alertamientos con contexto operativo y banderas de vigencia institucional.';
-
