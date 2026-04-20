@@ -22,7 +22,8 @@ a {
 }
 
 button,
-input {
+input,
+textarea {
     font: inherit;
 }
 
@@ -111,9 +112,23 @@ input {
     background: #ffffff;
 }
 
-.field input:focus {
+.field textarea {
+    border: 1px solid #c7d4df;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #ffffff;
+    resize: vertical;
+    min-height: 112px;
+}
+
+.field input:focus,
+.field textarea:focus {
     outline: 2px solid rgba(15, 93, 115, 0.18);
     border-color: #0f5d73;
+}
+
+.field--full {
+    grid-column: 1 / -1;
 }
 
 .button-row {
@@ -159,6 +174,10 @@ input {
     margin: 0;
     color: #8b1e3f;
     font-weight: 600;
+}
+
+.message--success {
+    color: #0d6b40;
 }
 
 .summary-grid {
@@ -294,6 +313,18 @@ input {
     background: #f7fafc;
     border: 1px solid #d9e4ec;
     margin-bottom: 24px;
+}
+
+.form-panel {
+    border-radius: 16px;
+    padding: 20px;
+    background: #f7fbf8;
+    border: 1px solid #cfe1d7;
+    margin-bottom: 24px;
+}
+
+.section-actions {
+    margin-bottom: 16px;
 }
 
 .results-summary {

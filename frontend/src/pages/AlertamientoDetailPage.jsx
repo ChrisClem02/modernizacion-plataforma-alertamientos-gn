@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     getAlertamientoDetailRequest,
     getAlertamientoHistorialRequest
@@ -31,11 +31,13 @@ function DetailPair({ label, value, mono = false }) {
 
 function AlertamientoDetailPage() {
     const { id } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const [detail, setDetail] = useState(null);
     const [historial, setHistorial] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState(null);
+    const flashMessage = location.state?.flashMessage || null;
 
     useEffect(() => {
         let isMounted = true;
@@ -105,6 +107,7 @@ function AlertamientoDetailPage() {
                 <p className="loading-state">Consultando detalle e historial del alertamiento...</p>
             ) : null}
 
+            {flashMessage ? <p className="message message--success">{flashMessage}</p> : null}
             {errorMessage ? <p className="message">{errorMessage}</p> : null}
 
             {detail ? (

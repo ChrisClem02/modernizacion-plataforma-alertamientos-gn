@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getAlertamientosRequest } from '../api/alertamientos.api';
+import ManualAlertamientoForm from '../components/ManualAlertamientoForm';
 import { useAuthStore } from '../store/auth.store';
 
 const EMPTY_FILTER_FORM = {
@@ -63,6 +64,7 @@ function formatDateTime(value) {
 }
 
 function AlertamientosPage() {
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [filtersForm, setFiltersForm] = useState(() => createFiltersFromSearchParams(searchParams));
     const [responseData, setResponseData] = useState({
@@ -70,6 +72,7 @@ function AlertamientosPage() {
         pagination: null,
         data: []
     });
+    const [isCreateFormVisible, setIsCreateFormVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState(null);
     const user = useAuthStore((state) => state.user);
@@ -168,6 +171,30 @@ function AlertamientosPage() {
     const hasPreviousPage = currentPage > 1;
     const hasNextPage = pagination ? currentPage < pagination.total_pages : false;
 
+    function handleOpenCreateForm() {
+        setIsCreateFormVisible(true);
+    }
+
+    function handleCloseCreateForm() {
+        setIsCreateFormVisible(false);
+    }
+
+    function handleAlertamientoCreated(response) {
+        const createdAlertamientoId = response?.data?.id_alertamiento;
+
+        if (!createdAlertamientoId) {
+            return;
+        }
+
+        // En vez de refrescar el listado y forzar al usuario a buscar el nuevo
+        // registro, se le lleva directo al detalle con un mensaje de confirmacion.
+        navigate(`/alertamientos/${createdAlertamientoId}`, {
+            state: {
+                flashMessage: response.message || 'Alertamiento manual registrado correctamente.'
+            }
+        });
+    }
+
     return (
         <section className="card card--wide">
             <div className="section-heading">
@@ -184,6 +211,24 @@ function AlertamientosPage() {
                     <strong>{user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
                 </div>
             </div>
+
+            <div className="button-row section-actions">
+                <button
+                    className="button"
+                    type="button"
+                    onClick={handleOpenCreateForm}
+                    disabled={isCreateFormVisible}
+                >
+                    Nuevo alertamiento
+                </button>
+            </div>
+
+            {isCreateFormVisible ? (
+                <ManualAlertamientoForm
+                    onCancel={handleCloseCreateForm}
+                    onCreated={handleAlertamientoCreated}
+                />
+            ) : null}
 
             <form className="filter-panel" onSubmit={handleSearchSubmit}>
                 <div className="filter-grid">
