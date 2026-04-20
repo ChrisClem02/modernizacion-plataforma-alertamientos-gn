@@ -1,11 +1,15 @@
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import AppLayout from '../components/AppLayout';
 import ProtectedRoute from '../components/ProtectedRoute';
+import AlertamientoDetailPage from '../pages/AlertamientoDetailPage';
+import AlertamientosPage from '../pages/AlertamientosPage';
 import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
-// Router minimo para esta etapa: login y dashboard protegido.
+// Router protegido extendido: ahora el frontend puede navegar entre dashboard,
+// listado de alertamientos y detalle individual sin perder el control de sesion.
 export const appRouter = createBrowserRouter([
     {
         path: '/',
@@ -19,8 +23,21 @@ export const appRouter = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
             {
-                path: '/dashboard',
-                element: <DashboardPage />
+                element: <AppLayout />,
+                children: [
+                    {
+                        path: '/dashboard',
+                        element: <DashboardPage />
+                    },
+                    {
+                        path: '/alertamientos',
+                        element: <AlertamientosPage />
+                    },
+                    {
+                        path: '/alertamientos/:id',
+                        element: <AlertamientoDetailPage />
+                    }
+                ]
             }
         ]
     },
