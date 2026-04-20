@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- =============================================================================
 -- MODELO FISICO BASE
 -- Modernizacion de la Plataforma Nacional de Alertamiento de la Guardia Nacional
--- Version 2.1
+-- Version 3
 -- =============================================================================
 -- Separacion conceptual conservada:
 -- 1. Jerarquia operativa: REGION_OPERATIVA -> CENTRAL_OPERATIVA -> TORRE_TIDV
