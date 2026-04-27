@@ -47,5 +47,34 @@ Por ello, el sistema se enfoca en la operación de alertamientos sobre una estru
 **Conclusión:**  
 La administración de dicha jerarquía se considera un **proceso externo** al alcance de este prototipo, centrando el esfuerzo de desarrollo en la eficiencia del motor de alertamientos.
 
----
+---## En caso de NO MANEJAR REPORTES
+
+En caso de no manejar reportes:
+
+**“¿Por qué no implementaste reportes?”**
+**Respondes:**
+El sistema ya cubre completamente el flujo operativo de alertamientos, incluyendo consulta, registro, actualización de estatus y visualización geográfica, 
+todos bajo control de visibilidad institucional.
+La implementación de reportes implica consultas agregadas que deben respetar exactamente la misma lógica de visibilidad, 
+lo cual requiere una extensión analítica adicional.
+Por ello, se decidió priorizar la consistencia y estabilidad del modelo operativo, dejando los reportes como una línea de trabajo futuro.
+
+**¿Pero no son importantes los reportes?”**
+**Respondes:**
+Sí, son importantes a nivel analítico, pero no son necesarios para validar el objetivo del proyecto, 
+que es la modernización del flujo operativo y el control de acceso a la información.
+El sistema ya permite la consulta filtrada y controlada de alertamientos, lo cual cubre la necesidad operativa principal.
+
+**“¿Entonces tu sistema está incompleto?”**
+**Respondes:**
+No está incompleto, está acotado.
+El prototipo se enfoca en la operación y control de alertamientos, mientras que los componentes analíticos
+como reportes se plantean como una extensión natural del sistema en una siguiente fase.
+
+**“¿Podrías implementarlos después?”**
+
+**Respondes:**
+Sí. *La arquitectura actual permite extender el sistema para incorporar 
+reportes reutilizando la lógica de visibilidad existente, 
+por lo que su integración futura es totalmente viable sin modificar el modelo de datos.*
 
