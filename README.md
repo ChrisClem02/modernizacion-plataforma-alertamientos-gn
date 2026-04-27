@@ -46,16 +46,6 @@ docker compose logs postgres_mpna_gn
 - Usuario: `postgres`
 - Password: el de tu `.env`
 
-## GitHub privado
-
-1. Crear un repositorio privado vacio en GitHub.
-2. Copia su URL HTTPS.
-3. Ejecuta:
-
-```powershell
-git remote add origin <URL_DEL_REPO>
-git push -u origin main
-```
 
 ## Otra laptop
 
