@@ -179,6 +179,11 @@ textarea {
     border-radius: 10px;
 }
 
+.button--small {
+    padding: 8px 12px;
+    border-radius: 10px;
+}
+
 .message {
     margin: 0;
     color: #8b1e3f;
@@ -390,6 +395,44 @@ textarea {
 
 .data-table tbody tr:hover {
     background: #fbfdfe;
+}
+
+.data-table--users {
+    min-width: 1080px;
+}
+
+.table-cell-stack {
+    display: grid;
+    gap: 4px;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #e8f6ef;
+    color: #0d6b40;
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+.status-pill--inactive {
+    background: #f8e8ee;
+    color: #8b1e3f;
+}
+
+.field-hint {
+    margin: 0;
+    color: #4f6472;
 }
 
 .pagination-bar {

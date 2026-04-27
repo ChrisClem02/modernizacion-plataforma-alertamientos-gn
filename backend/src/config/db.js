@@ -46,9 +46,12 @@ function normalizeTransactionUserId(userId) {
 async function setCurrentAppUserLocal(client, userId) {
     const normalizedUserId = normalizeTransactionUserId(userId);
 
-    // El valor ya fue reducido a digitos positivos, por lo que la asignacion
-    // es segura y explicita con SET LOCAL dentro de la transaccion actual.
-    await client.query(`SET LOCAL app.current_user_id = '${normalizedUserId}'`);
+    // Se usa set_config con parametros para evitar concatenar SQL y para que
+    // el valor quede acotado a la transaccion actual (is_local = true).
+    await client.query(
+        'SELECT set_config($1, $2, true)',
+        ['app.current_user_id', normalizedUserId]
+    );
 }
 
 // Este helper centraliza la forma correcta de propagar el contexto del usuario

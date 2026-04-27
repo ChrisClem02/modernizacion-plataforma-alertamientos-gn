@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const env = require('../../config/env');
-const { query } = require('../../config/db');
+const { query, withTransaction } = require('../../config/db');
 const { createHttpError } = require('../../middlewares/error.middleware');
 
 // Consulta minima para login. Se obtiene el hash almacenado y el estado del
@@ -65,6 +65,12 @@ const AUTH_CONTEXT_QUERY = `
       ON toper.id_territorio = ua.id_territorio
     WHERE u.id_usuario = $1
     LIMIT 1
+`;
+
+const UPDATE_LAST_ACCESS_QUERY = `
+    UPDATE usuario
+    SET fecha_ultimo_acceso = CURRENT_TIMESTAMP
+    WHERE id_usuario = $1
 `;
 
 function normalizeUsername(rawValue) {
@@ -194,6 +200,16 @@ async function getCurrentUserContextById(userId) {
     return mapUserContext(result.rows[0]);
 }
 
+async function recordSuccessfulLogin(userId) {
+    // El login exitoso actualiza solo la marca de ultimo acceso. Al ser un
+    // UPDATE sobre usuario, PostgreSQL registra la auditoria tecnica existente.
+    await withTransaction(async (client) => {
+        await client.query(UPDATE_LAST_ACCESS_QUERY, [userId]);
+    }, {
+        userId
+    });
+}
+
 async function loginUser(credentials) {
     const nombreUsuario = normalizeUsername(credentials.nombre_usuario);
     const contrasena = normalizePassword(credentials.contrasena);
@@ -227,6 +243,8 @@ async function loginUser(credentials) {
     if (!passwordMatches) {
         throw createHttpError(401, 'Credenciales invalidas.');
     }
+
+    await recordSuccessfulLogin(userRow.id_usuario);
 
     const userContext = await getCurrentUserContextById(userRow.id_usuario);
 

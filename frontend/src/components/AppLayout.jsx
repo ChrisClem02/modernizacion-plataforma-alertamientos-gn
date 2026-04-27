@@ -8,6 +8,7 @@ function AppLayout() {
         user: state.user,
         logout: state.logout
     }));
+    const isAdministrador = user?.rol?.nombre_rol === 'ADMINISTRADOR';
 
     function handleLogout() {
         logout();
@@ -39,6 +40,14 @@ function AppLayout() {
                         >
                             Alertamientos
                         </NavLink>
+                        {isAdministrador ? (
+                            <NavLink
+                                className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+                                to="/usuarios"
+                            >
+                                Usuarios
+                            </NavLink>
+                        ) : null}
                     </nav>
 
                     <button className="button button--secondary" type="button" onClick={handleLogout}>
