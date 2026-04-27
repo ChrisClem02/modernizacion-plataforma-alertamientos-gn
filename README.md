@@ -48,7 +48,7 @@ docker compose logs postgres_mpna_gn
 
 ## GitHub privado
 
-1. Crea un repositorio privado vacio en GitHub.
+1. Crear un repositorio privado vacio en GitHub.
 2. Copia su URL HTTPS.
 3. Ejecuta:
 
@@ -66,4 +66,4 @@ git push -u origin main
 
 ## Nota sobre la version de PostgreSQL
 
-Se deja `POSTGRES_VERSION=16` por defecto para evitar descarga adicional en esta maquina. Si en otra laptop tienes acceso normal a Docker Hub y quieres usar 17 o 18, cambia solo esa variable en `.env`.
+Se deja `POSTGRES_VERSION=16` por defecto para evitar descarga adicional en esta maquina. Si en otra laptop tienes acceso normal a Docker Hub y quieres usar 17 o 18, cambiar solo esa variable en `.env`.
