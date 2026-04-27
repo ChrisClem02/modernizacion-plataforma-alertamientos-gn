@@ -47,7 +47,9 @@ Por ello, el sistema se enfoca en la operación de alertamientos sobre una estru
 **Conclusión:**  
 La administración de dicha jerarquía se considera un **proceso externo** al alcance de este prototipo, centrando el esfuerzo de desarrollo en la eficiencia del motor de alertamientos.
 
----## En caso de NO MANEJAR REPORTES
+---
+
+## En caso de NO MANEJAR REPORTES
 
 En caso de no manejar reportes:
 
