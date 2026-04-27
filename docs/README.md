@@ -44,11 +44,14 @@ los cierres o siguientes subetapas.
     - Resume los modulos cerrados: autenticacion, alertamientos, usuarios, visibilidad
       institucional y auditoria tecnica. Este es el documento de cierre formal previo a Mapa V1.
 
-## Siguiente subetapa
+12. [Etapa 2 - Mapa V1](./etapa_2_mapa_v1.md)
+    - Documenta el cierre funcional del mapa: objetivo, backend usado, frontend implementado,
+      Leaflet, filtros, validaciones y pendientes fuera de alcance.
 
-- `etapa_2_backend_mapa.md` corresponde a Mapa V1 y debe leerse como trabajo posterior al
-  cierre de subetapa sin mapa. Si todavia no aparece en GitHub, significa que el codigo y la
-  documentacion de mapa siguen en preparacion local.
+## Documentos tecnicos complementarios
+
+- [Etapa 2 - Backend Mapa V1](./etapa_2_backend_mapa.md)
+  - Detalla el contrato tecnico de `GET /api/mapa`, reglas de visibilidad y uso de coordenadas.
 
 ## Anexos tecnicos
 
