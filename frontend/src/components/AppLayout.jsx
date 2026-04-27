@@ -40,6 +40,12 @@ function AppLayout() {
                         >
                             Alertamientos
                         </NavLink>
+                        <NavLink
+                            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+                            to="/mapa"
+                        >
+                            Mapa
+                        </NavLink>
                         {isAdministrador ? (
                             <NavLink
                                 className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}

@@ -3,6 +3,7 @@ const authRoutes = require('../modules/auth/auth.routes');
 const usuariosRoutes = require('../modules/usuarios/usuarios.routes');
 const jerarquiaRoutes = require('../modules/jerarquia/jerarquia.routes');
 const alertamientosRoutes = require('../modules/alertamientos/alertamientos.routes');
+const mapaRoutes = require('../modules/mapa/mapa.routes');
 const auditoriaRoutes = require('../modules/auditoria/auditoria.routes');
 const reportesRoutes = require('../modules/reportes/reportes.routes');
 
@@ -20,6 +21,7 @@ router.use('/auth', authRoutes);
 router.use('/usuarios', usuariosRoutes);
 router.use('/jerarquia', jerarquiaRoutes);
 router.use('/alertamientos', alertamientosRoutes);
+router.use('/mapa', mapaRoutes);
 router.use('/auditoria', auditoriaRoutes);
 router.use('/reportes', reportesRoutes);
 

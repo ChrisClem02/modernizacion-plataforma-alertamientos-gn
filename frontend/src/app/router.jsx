@@ -7,6 +7,7 @@ import AlertamientoDetailPage from '../pages/AlertamientoDetailPage';
 import AlertamientosPage from '../pages/AlertamientosPage';
 import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
+import MapaPage from '../pages/MapaPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import UsuariosPage from '../pages/UsuariosPage';
 
@@ -38,6 +39,10 @@ export const appRouter = createBrowserRouter([
                     {
                         path: '/alertamientos/:id',
                         element: <AlertamientoDetailPage />
+                    },
+                    {
+                        path: '/mapa',
+                        element: <MapaPage />
                     },
                     {
                         path: '/usuarios',
