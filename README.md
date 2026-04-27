@@ -17,6 +17,16 @@ Este proyecto se creo fuera de OneDrive para evitar bloqueos con Git y Docker:
 - Documentacion tecnica en `docs/base_datos_tesis.md`
 - Diagrama E-R en Mermaid en `docs/diagrama_er_mermaid.md`
 
+## Documentacion
+
+La lectura recomendada de los documentos del proyecto esta organizada en:
+
+- [docs/README.md](docs/README.md)
+
+Ese indice ordena la documentacion de forma secuencial: base de datos, plan aprobado,
+frontend minimo, alertamientos, autenticacion, usuarios, cierre de subetapa y siguiente
+subetapa de mapa.
+
 ## Primer arranque local
 
 ```powershell
