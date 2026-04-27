@@ -40,7 +40,7 @@ los cierres o siguientes subetapas.
 10. [Etapa 2 - Backend Usuarios](./etapa_2_backend_usuarios.md)
     - Describe CRUD de usuarios, roles, niveles operativos, ambitos y validaciones.
 
-11. [Cierre de Subetapa Sin Mapa](./etapa_2_cierre_subetapa_sin_mapa.md)
+11. [Cierre de Subetapa Sin Mapa](./cierre_subetapa_sin_mapa_ETAPA2.md)
     - Resume los modulos cerrados: autenticacion, alertamientos, usuarios, visibilidad
       institucional y auditoria tecnica. Este es el documento de cierre formal previo a Mapa V1.
 
