@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Esta base de datos implementa el modelo fisico del prototipo para la Modernizacion de la Plataforma Nacional de Alertamiento de la Guardia Nacional sobre PostgreSQL 15+.
+Esta base de datos implementa el modelo fisico del prototipo para la Modernizacion de la Plataforma Nacional de Alertamiento de la Guardia Nacional sobre PostgreSQL.
 
 El diseno conserva tres dimensiones separadas:
 
