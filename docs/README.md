@@ -48,6 +48,10 @@ los cierres o siguientes subetapas.
     - Documenta el cierre funcional del mapa: objetivo, backend usado, frontend implementado,
       Leaflet, filtros, validaciones y pendientes fuera de alcance.
 
+13. [Etapa 2 - UI Institucional V1](./etapa_2_ui_institucional_v1.md)
+    - Documenta el pulido visual transversal del frontend: tokens CSS, layout, dashboard,
+      alertamientos, usuarios, mapa, login institucional y assets locales versionados.
+
 ## Documentos tecnicos complementarios
 
 - [Etapa 2 - Backend Mapa V1](./etapa_2_backend_mapa.md)
