@@ -63,6 +63,26 @@ function formatDateTime(value) {
     }).format(new Date(value));
 }
 
+function getAlertamientoStatusClassName(statusName) {
+    const normalizedStatus = typeof statusName === 'string'
+        ? statusName.trim().toUpperCase()
+        : '';
+
+    if (normalizedStatus === 'CERRADO') {
+        return 'status-pill status-pill--closed';
+    }
+
+    if (normalizedStatus === 'EN_ATENCION') {
+        return 'status-pill status-pill--warning';
+    }
+
+    if (normalizedStatus === 'VALIDADO') {
+        return 'status-pill status-pill--active';
+    }
+
+    return 'status-pill status-pill--pending';
+}
+
 function AlertamientosPage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -79,13 +99,13 @@ function AlertamientosPage() {
 
     const effectiveParams = useMemo(() => buildRequestParams(searchParams), [searchParams]);
 
-    // El formulario se sincroniza con la URL para que recargar la pagina no
-    // pierda filtros ni paginacion ya aplicados.
+    // El formulario se sincroniza con la URL para que recargar la página no
+    // pierda filtros ni paginación ya aplicados.
     useEffect(() => {
         setFiltersForm(createFiltersFromSearchParams(searchParams));
     }, [searchParams]);
 
-    // Cada cambio de query string dispara una consulta nueva. Asi el listado
+    // Cada cambio de query string dispara una consulta nueva. Así el listado
     // queda derivado por completo del estado de la URL.
     useEffect(() => {
         let isMounted = true;
@@ -144,8 +164,8 @@ function AlertamientosPage() {
             }
         });
 
-        // Cada nueva busqueda vuelve a la primera pagina para evitar que un
-        // cambio de filtros deje al usuario en una pagina inexistente.
+        // Cada nueva búsqueda vuelve a la primera página para evitar que un
+        // cambio de filtros deje al usuario en una página inexistente.
         nextParams.set('page', '1');
         nextParams.set('limit', searchParams.get('limit') || '10');
         setSearchParams(nextParams);
@@ -199,7 +219,7 @@ function AlertamientosPage() {
         <section className="card card--wide">
             <div className="section-heading">
                 <div>
-                    <p className="eyebrow">Modulo Operativo</p>
+                    <p className="eyebrow">Módulo Operativo</p>
                     <h2 className="title">Consulta de Alertamientos</h2>
                     <p className="subtitle">
                         El listado ya respeta la visibilidad institucional del usuario autenticado.
@@ -231,9 +251,14 @@ function AlertamientosPage() {
             ) : null}
 
             <form className="filter-panel" onSubmit={handleSearchSubmit}>
+                <div className="panel-heading">
+                    <h3>Filtros de consulta</h3>
+                    <p>Refina el listado visible sin modificar el ámbito institucional aplicado por backend.</p>
+                </div>
+
                 <div className="filter-grid">
                     <div className="field">
-                        <label htmlFor="fecha_inicio">fecha_inicio</label>
+                        <label htmlFor="fecha_inicio">Fecha inicio</label>
                         <input
                             id="fecha_inicio"
                             name="fecha_inicio"
@@ -244,7 +269,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="fecha_fin">fecha_fin</label>
+                        <label htmlFor="fecha_fin">Fecha fin</label>
                         <input
                             id="fecha_fin"
                             name="fecha_fin"
@@ -255,7 +280,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="placa">placa</label>
+                        <label htmlFor="placa">Placa</label>
                         <input
                             id="placa"
                             name="placa"
@@ -267,7 +292,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="id_torre">id_torre</label>
+                        <label htmlFor="id_torre">ID torre</label>
                         <input
                             id="id_torre"
                             name="id_torre"
@@ -279,7 +304,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="id_estatus_alertamiento">id_estatus_alertamiento</label>
+                        <label htmlFor="id_estatus_alertamiento">ID estatus</label>
                         <input
                             id="id_estatus_alertamiento"
                             name="id_estatus_alertamiento"
@@ -291,7 +316,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="id_region">id_region</label>
+                        <label htmlFor="id_region">ID region</label>
                         <input
                             id="id_region"
                             name="id_region"
@@ -303,7 +328,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="id_estado">id_estado</label>
+                        <label htmlFor="id_estado">ID estado</label>
                         <input
                             id="id_estado"
                             name="id_estado"
@@ -315,7 +340,7 @@ function AlertamientosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="id_territorio">id_territorio</label>
+                        <label htmlFor="id_territorio">ID territorio</label>
                         <input
                             id="id_territorio"
                             name="id_territorio"
@@ -345,7 +370,7 @@ function AlertamientosPage() {
             {errorMessage ? <p className="message">{errorMessage}</p> : null}
 
             {isLoading ? (
-                <p className="loading-state">Consultando alertamientos visibles para tu ambito...</p>
+                <p className="loading-state">Consultando alertamientos visibles para tu ámbito...</p>
             ) : (
                 <>
                     <div className="results-summary">
@@ -353,7 +378,7 @@ function AlertamientosPage() {
                             <strong>Total:</strong> {pagination?.total_items ?? 0}
                         </p>
                         <p>
-                            <strong>Pagina:</strong> {pagination?.page ?? 1}
+                            <strong>Página:</strong> {pagination?.page ?? 1}
                             {' / '}
                             {pagination?.total_pages ?? 0}
                         </p>
@@ -363,12 +388,12 @@ function AlertamientosPage() {
                         <div className="empty-state">
                             <h3>Sin resultados</h3>
                             <p>
-                                No se encontraron alertamientos para los filtros y el ambito institucional actuales.
+                                No se encontraron alertamientos para los filtros y el ámbito institucional actuales.
                             </p>
                         </div>
                     ) : (
                         <div className="table-wrapper">
-                            <table className="data-table">
+                            <table className="data-table data-table--comfortable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -387,7 +412,11 @@ function AlertamientosPage() {
                                             <td className="mono">{alertamiento.id_alertamiento}</td>
                                             <td className="mono">{alertamiento.placa_detectada}</td>
                                             <td>{formatDateTime(alertamiento.fecha_hora_deteccion)}</td>
-                                            <td>{alertamiento.estatus?.nombre_estatus || 'Sin estatus'}</td>
+                                            <td>
+                                                <span className={getAlertamientoStatusClassName(alertamiento.estatus?.nombre_estatus)}>
+                                                    {alertamiento.estatus?.nombre_estatus || 'Sin estatus'}
+                                                </span>
+                                            </td>
                                             <td>{alertamiento.torre?.nombre_torre || 'Sin torre'}</td>
                                             <td>{alertamiento.estado?.nombre_estado || 'Sin estado'}</td>
                                             <td>{alertamiento.territorio?.nombre_territorio || 'Sin territorio'}</td>
@@ -413,11 +442,11 @@ function AlertamientosPage() {
                             onClick={() => handleChangePage(currentPage - 1)}
                             disabled={!hasPreviousPage}
                         >
-                            Pagina anterior
+                            Página anterior
                         </button>
 
                         <span className="pagination-bar__text">
-                            Mostrando pagina {pagination?.page ?? 1} de {pagination?.total_pages ?? 0}
+                            Mostrando página {pagination?.page ?? 1} de {pagination?.total_pages ?? 0}
                         </span>
 
                         <button
@@ -426,7 +455,7 @@ function AlertamientosPage() {
                             onClick={() => handleChangePage(currentPage + 1)}
                             disabled={!hasNextPage}
                         >
-                            Pagina siguiente
+                            Página siguiente
                         </button>
                     </div>
                 </>

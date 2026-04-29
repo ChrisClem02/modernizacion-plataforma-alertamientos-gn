@@ -9,3 +9,4 @@ build/
 coverage/
 backend/.env
 frontend/.env
+.tmp-edge-profile/

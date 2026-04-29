@@ -14,9 +14,16 @@ function DashboardPage() {
         errorMessage: state.errorMessage,
         fetchMe: state.fetchMe
     }));
-
+    const rolNombre = user?.rol?.nombre_rol || 'Sin rol';
+    const nivelNombre = user?.nivel_operativo?.nombre_nivel || 'Sin nivel operativo';
+    const ambito = user?.ambito;
+    const ambitoTipo = ambito?.tipo || 'Sin ámbito';
+    const ambitoNombre = ambito?.torre?.nombre_torre
+        || ambito?.territorio?.nombre_territorio
+        || ambito?.estado?.nombre_estado
+        || (ambito?.ambito_nacional ? 'Cobertura nacional' : 'Sin ámbito asignado');
     // Se refresca el perfil al entrar al dashboard para reflejar el estado real
-    // del backend, incluso si la pagina fue recargada.
+    // del backend, incluso si la página fue recargada.
     useEffect(() => {
         void fetchMe().catch(() => {});
     }, [fetchMe]);
@@ -25,15 +32,15 @@ function DashboardPage() {
         <section className="card card--wide">
             <div className="section-heading">
                 <div>
-                    <p className="eyebrow">Resumen Inicial</p>
-                    <h2 className="title">Dashboard</h2>
+                    <p className="eyebrow">Vista institucional</p>
+                    <h2 className="title">Panel de control</h2>
                     <p className="subtitle">
-                        Validacion minima del contexto autenticado y punto de entrada al modulo de alertamientos.
+                        Acceso rápido a la operación de alertamientos y confirmación del contexto de visibilidad vigente.
                     </p>
                 </div>
 
                 <Link className="button" to="/alertamientos">
-                    Abrir modulo de alertamientos
+                    Abrir alertamientos
                 </Link>
             </div>
 
@@ -44,33 +51,41 @@ function DashboardPage() {
             ) : null}
 
             {user ? (
-                <div className="summary-grid">
-                    <section className="summary-box">
-                        <h3>Usuario</h3>
-                        <p><strong>nombre_usuario:</strong> <span className="mono">{user.nombre_usuario}</span></p>
-                        <p><strong>id_usuario:</strong> <span className="mono">{user.id_usuario}</span></p>
-                        <p><strong>correo:</strong> {user.correo_electronico}</p>
+                <div className="dashboard-grid">
+                    <section className="summary-box dashboard-card dashboard-card--primary">
+                        <span className="dashboard-card__label">Sesión activa</span>
+                        <h3>{user.nombre_usuario}</h3>
+                        <p>{user.correo_electronico}</p>
+                        <p className="dashboard-card__meta">
+                            ID usuario <span className="mono">{user.id_usuario}</span>
+                        </p>
                     </section>
 
-                    <section className="summary-box">
-                        <h3>Rol</h3>
-                        <p><strong>id_rol:</strong> <span className="mono">{user.id_rol}</span></p>
-                        <p><strong>nombre_rol:</strong> {user.rol?.nombre_rol || 'Sin rol'}</p>
+                    <section className="summary-box dashboard-card">
+                        <span className="dashboard-card__label">Rol institucional</span>
+                        <h3>{rolNombre}</h3>
+                        <p>Perfil con permisos aplicados desde backend.</p>
+                        <p className="dashboard-card__meta">
+                            ID rol <span className="mono">{user.id_rol}</span>
+                        </p>
                     </section>
 
-                    <section className="summary-box">
-                        <h3>Nivel Operativo</h3>
-                        <p><strong>id_nivel_operativo:</strong> <span className="mono">{user.nivel_operativo?.id_nivel_operativo || 'N/A'}</span></p>
-                        <p><strong>nombre_nivel:</strong> {user.nivel_operativo?.nombre_nivel || 'Sin nivel'}</p>
+                    <section className="summary-box dashboard-card">
+                        <span className="dashboard-card__label">Nivel operativo</span>
+                        <h3>{nivelNombre}</h3>
+                        <p>Define el alcance operativo usado para consultar información.</p>
+                        <p className="dashboard-card__meta">
+                            ID nivel <span className="mono">{user.nivel_operativo?.id_nivel_operativo || 'N/A'}</span>
+                        </p>
                     </section>
 
-                    <section className="summary-box">
-                        <h3>Ambito</h3>
-                        <p><strong>tipo:</strong> {user.ambito?.tipo || 'Sin ambito'}</p>
-                        <p><strong>ambito_nacional:</strong> {String(user.ambito?.ambito_nacional ?? false)}</p>
-                        <pre className="mono preformatted-box">
-                            {JSON.stringify(user.ambito, null, 2)}
-                        </pre>
+                    <section className="summary-box dashboard-card dashboard-card--scope">
+                        <span className="dashboard-card__label">Ámbito de visibilidad</span>
+                        <h3>{ambitoNombre}</h3>
+                        <p>{ambitoTipo}</p>
+                        <p className="dashboard-card__meta">
+                            Ámbito nacional: {ambito?.ambito_nacional ? 'Sí' : 'No'}
+                        </p>
                     </section>
                 </div>
             ) : null}

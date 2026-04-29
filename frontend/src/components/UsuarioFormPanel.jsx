@@ -76,7 +76,7 @@ function buildAmbitoPayload(formState) {
         const torreId = Number.parseInt(formState.id_torre, 10);
 
         if (!Number.isInteger(torreId) || torreId <= 0) {
-            throw new Error('Selecciona la torre para el ambito del usuario.');
+            throw new Error('Selecciona la torre para el ámbito del usuario.');
         }
 
         return {
@@ -89,7 +89,7 @@ function buildAmbitoPayload(formState) {
         const estadoId = Number.parseInt(formState.id_estado, 10);
 
         if (!Number.isInteger(estadoId) || estadoId <= 0) {
-            throw new Error('Selecciona el estado para el ambito del usuario.');
+            throw new Error('Selecciona el estado para el ámbito del usuario.');
         }
 
         return {
@@ -102,7 +102,7 @@ function buildAmbitoPayload(formState) {
         const territorioId = Number.parseInt(formState.id_territorio, 10);
 
         if (!Number.isInteger(territorioId) || territorioId <= 0) {
-            throw new Error('Selecciona el territorio para el ambito del usuario.');
+            throw new Error('Selecciona el territorio para el ámbito del usuario.');
         }
 
         return {
@@ -168,7 +168,7 @@ function getAmbitoHint(levelId) {
         return 'El nivel NACIONAL no requiere una referencia territorial adicional.';
     }
 
-    return 'Selecciona primero el nivel operativo para habilitar el ambito correspondiente.';
+    return 'Selecciona primero el nivel operativo para habilitar el ámbito correspondiente.';
 }
 
 function UsuarioFormPanel({ mode, initialUser, catalogs, onCancel, onSubmit }) {
@@ -244,202 +244,218 @@ function UsuarioFormPanel({ mode, initialUser, catalogs, onCancel, onSubmit }) {
         <section className="form-panel">
             <div className="section-heading section-heading--compact">
                 <div>
-                    <p className="eyebrow">{isCreateMode ? 'Alta de Usuario' : 'Edicion de Usuario'}</p>
+                    <p className="eyebrow">{isCreateMode ? 'Alta de Usuario' : 'Edición de Usuario'}</p>
                     <h3 className="title title--small">
                         {isCreateMode ? 'Nuevo usuario institucional' : 'Actualizar usuario existente'}
                     </h3>
                     <p className="subtitle subtitle--small">
-                        El formulario consume directamente el backend de usuarios ya validado y respeta las reglas de rol y ambito.
+                        El formulario consume directamente el backend de usuarios ya validado y respeta las reglas de rol y ámbito.
                     </p>
                 </div>
             </div>
 
             <form className="form-grid" onSubmit={handleSubmit}>
-                <div className="filter-grid">
-                    <div className="field">
-                        <label htmlFor="usuario_nombres">nombres</label>
-                        <input
-                            id="usuario_nombres"
-                            name="nombres"
-                            type="text"
-                            value={formState.nombres}
-                            onChange={handleChange}
-                            title="Solo se permiten letras, espacios, apostrofes y guiones."
-                            required
-                        />
+                <section className="form-section">
+                    <div className="panel-heading">
+                        <h3>Datos del usuario</h3>
+                        <p>Captura identidad, cuenta institucional y credenciales iniciales.</p>
                     </div>
 
-                    <div className="field">
-                        <label htmlFor="usuario_apellido_paterno">apellido_paterno</label>
-                        <input
-                            id="usuario_apellido_paterno"
-                            name="apellido_paterno"
-                            type="text"
-                            value={formState.apellido_paterno}
-                            onChange={handleChange}
-                            title="Solo se permiten letras, espacios, apostrofes y guiones."
-                            required
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="usuario_apellido_materno">apellido_materno</label>
-                        <input
-                            id="usuario_apellido_materno"
-                            name="apellido_materno"
-                            type="text"
-                            value={formState.apellido_materno}
-                            onChange={handleChange}
-                            title="Solo se permiten letras, espacios, apostrofes y guiones."
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="usuario_nombre_usuario">nombre_usuario</label>
-                        <input
-                            id="usuario_nombre_usuario"
-                            name="nombre_usuario"
-                            type="text"
-                            value={formState.nombre_usuario}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="usuario_correo_electronico">correo_electronico</label>
-                        <input
-                            id="usuario_correo_electronico"
-                            name="correo_electronico"
-                            type="email"
-                            value={formState.correo_electronico}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    {isCreateMode ? (
+                    <div className="filter-grid">
                         <div className="field">
-                            <label htmlFor="usuario_contrasena">contrasena_inicial</label>
+                            <label htmlFor="usuario_nombres">Nombres</label>
                             <input
-                                id="usuario_contrasena"
-                                name="contrasena"
-                                type="password"
-                                value={formState.contrasena}
+                                id="usuario_nombres"
+                                name="nombres"
+                                type="text"
+                                value={formState.nombres}
+                                onChange={handleChange}
+                                title="Solo se permiten letras, espacios, apostrofes y guiones."
+                                required
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="usuario_apellido_paterno">Apellido paterno</label>
+                            <input
+                                id="usuario_apellido_paterno"
+                                name="apellido_paterno"
+                                type="text"
+                                value={formState.apellido_paterno}
+                                onChange={handleChange}
+                                title="Solo se permiten letras, espacios, apostrofes y guiones."
+                                required
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="usuario_apellido_materno">Apellido materno</label>
+                            <input
+                                id="usuario_apellido_materno"
+                                name="apellido_materno"
+                                type="text"
+                                value={formState.apellido_materno}
+                                onChange={handleChange}
+                                title="Solo se permiten letras, espacios, apostrofes y guiones."
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="usuario_nombre_usuario">Nombre de usuario</label>
+                            <input
+                                id="usuario_nombre_usuario"
+                                name="nombre_usuario"
+                                type="text"
+                                value={formState.nombre_usuario}
                                 onChange={handleChange}
                                 required
                             />
                         </div>
+
+                        <div className="field">
+                            <label htmlFor="usuario_correo_electronico">Correo electronico</label>
+                            <input
+                                id="usuario_correo_electronico"
+                                name="correo_electronico"
+                                type="email"
+                                value={formState.correo_electronico}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+
+                        {isCreateMode ? (
+                            <div className="field">
+                                <label htmlFor="usuario_contrasena">Contrasena inicial</label>
+                                <input
+                                    id="usuario_contrasena"
+                                    name="contrasena"
+                                    type="password"
+                                    value={formState.contrasena}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                        ) : null}
+                    </div>
+                </section>
+
+                <section className="form-section">
+                    <div className="panel-heading">
+                        <h3>Rol y ámbito operativo</h3>
+                        <p>Asigna el perfil y el alcance institucional que aplicará el backend.</p>
+                    </div>
+
+                    <div className="filter-grid">
+                        <div className="field">
+                            <label htmlFor="usuario_id_rol">Rol</label>
+                            <select
+                                id="usuario_id_rol"
+                                name="id_rol"
+                                value={formState.id_rol}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">Selecciona un rol</option>
+                                {catalogs.roles.map((role) => (
+                                    <option key={role.id_rol} value={role.id_rol}>
+                                        {role.nombre_rol}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="usuario_id_nivel_operativo">Nivel operativo</label>
+                            <select
+                                id="usuario_id_nivel_operativo"
+                                name="id_nivel_operativo"
+                                value={formState.id_nivel_operativo}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">Selecciona un nivel operativo</option>
+                                {catalogs.nivelesOperativos.map((nivel) => (
+                                    <option key={nivel.id_nivel_operativo} value={nivel.id_nivel_operativo}>
+                                        {nivel.nombre_nivel}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="field field--full">
+                        <label>Ámbito</label>
+                        <p className="field-hint">{getAmbitoHint(selectedNivelOperativo)}</p>
+                    </div>
+
+                    {selectedNivelOperativo === '1' ? (
+                        <div className="field">
+                            <label htmlFor="usuario_id_torre">Torre</label>
+                            <select
+                                id="usuario_id_torre"
+                                name="id_torre"
+                                value={formState.id_torre}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">Selecciona una torre</option>
+                                {availableTorres.map((torre) => (
+                                    <option key={torre.id_torre} value={torre.id_torre}>
+                                        {torre.nombre_torre} ({torre.codigo_torre || `ID ${torre.id_torre}`})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     ) : null}
 
-                    <div className="field">
-                        <label htmlFor="usuario_id_rol">rol</label>
-                        <select
-                            id="usuario_id_rol"
-                            name="id_rol"
-                            value={formState.id_rol}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="">Selecciona un rol</option>
-                            {catalogs.roles.map((role) => (
-                                <option key={role.id_rol} value={role.id_rol}>
-                                    {role.nombre_rol}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {selectedNivelOperativo === '2' ? (
+                        <div className="field">
+                            <label htmlFor="usuario_id_estado">Estado</label>
+                            <select
+                                id="usuario_id_estado"
+                                name="id_estado"
+                                value={formState.id_estado}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">Selecciona un estado</option>
+                                {availableEstados.map((estado) => (
+                                    <option key={estado.id_estado} value={estado.id_estado}>
+                                        {estado.nombre_estado}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : null}
 
-                    <div className="field">
-                        <label htmlFor="usuario_id_nivel_operativo">nivel_operativo</label>
-                        <select
-                            id="usuario_id_nivel_operativo"
-                            name="id_nivel_operativo"
-                            value={formState.id_nivel_operativo}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="">Selecciona un nivel operativo</option>
-                            {catalogs.nivelesOperativos.map((nivel) => (
-                                <option key={nivel.id_nivel_operativo} value={nivel.id_nivel_operativo}>
-                                    {nivel.nombre_nivel}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
+                    {selectedNivelOperativo === '3' ? (
+                        <div className="field">
+                            <label htmlFor="usuario_id_territorio">Territorio</label>
+                            <select
+                                id="usuario_id_territorio"
+                                name="id_territorio"
+                                value={formState.id_territorio}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">Selecciona un territorio</option>
+                                {availableTerritorios.map((territorio) => (
+                                    <option key={territorio.id_territorio} value={territorio.id_territorio}>
+                                        {territorio.nombre_territorio}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : null}
 
-                <div className="field field--full">
-                    <label>ambito</label>
-                    <p className="field-hint">{getAmbitoHint(selectedNivelOperativo)}</p>
-                </div>
-
-                {selectedNivelOperativo === '1' ? (
-                    <div className="field">
-                        <label htmlFor="usuario_id_torre">torre</label>
-                        <select
-                            id="usuario_id_torre"
-                            name="id_torre"
-                            value={formState.id_torre}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="">Selecciona una torre</option>
-                            {availableTorres.map((torre) => (
-                                <option key={torre.id_torre} value={torre.id_torre}>
-                                    {torre.nombre_torre} ({torre.codigo_torre || `ID ${torre.id_torre}`})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                ) : null}
-
-                {selectedNivelOperativo === '2' ? (
-                    <div className="field">
-                        <label htmlFor="usuario_id_estado">estado</label>
-                        <select
-                            id="usuario_id_estado"
-                            name="id_estado"
-                            value={formState.id_estado}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="">Selecciona un estado</option>
-                            {availableEstados.map((estado) => (
-                                <option key={estado.id_estado} value={estado.id_estado}>
-                                    {estado.nombre_estado}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                ) : null}
-
-                {selectedNivelOperativo === '3' ? (
-                    <div className="field">
-                        <label htmlFor="usuario_id_territorio">territorio</label>
-                        <select
-                            id="usuario_id_territorio"
-                            name="id_territorio"
-                            value={formState.id_territorio}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="">Selecciona un territorio</option>
-                            {availableTerritorios.map((territorio) => (
-                                <option key={territorio.id_territorio} value={territorio.id_territorio}>
-                                    {territorio.nombre_territorio}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                ) : null}
-
-                {selectedNivelOperativo === '4' ? (
-                    <div className="summary-box">
-                        <h3>Ambito Nacional</h3>
-                        <p>El backend registrara este usuario con visibilidad nacional completa.</p>
-                    </div>
-                ) : null}
+                    {selectedNivelOperativo === '4' ? (
+                        <div className="summary-box">
+                            <h3>Ámbito Nacional</h3>
+                            <p>El backend registrará este usuario con visibilidad nacional completa.</p>
+                        </div>
+                    ) : null}
+                </section>
 
                 {errorMessage ? <p className="message">{errorMessage}</p> : null}
 

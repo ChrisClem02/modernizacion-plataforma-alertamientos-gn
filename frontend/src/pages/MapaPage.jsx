@@ -371,9 +371,9 @@ function MapaPage() {
             bounds.push(coordinate);
         });
 
-        // Leaflet necesita recalcular tamano cuando el contenedor aparece dentro
+        // Leaflet necesita recalcular tamaño cuando el contenedor aparece dentro
         // del layout React. Se limpia el timer para no operar sobre un mapa ya
-        // desmontado durante cambios rapidos de ruta o sesion.
+        // desmontado durante cambios rápidos de ruta o sesión.
         let isEffectMounted = true;
         const resizeTimerId = window.setTimeout(() => {
             if (!isEffectMounted || mapRef.current !== map || !map.getContainer()) {
@@ -436,7 +436,7 @@ function MapaPage() {
                     <p className="eyebrow">Vista Geografica</p>
                     <h2 className="title">Mapa Operativo V1</h2>
                     <p className="subtitle">
-                        Torres y alertamientos visibles conforme al ambito institucional del usuario autenticado.
+                        Torres y alertamientos visibles conforme al ámbito institucional del usuario autenticado.
                     </p>
                 </div>
 
@@ -446,10 +446,15 @@ function MapaPage() {
                 </div>
             </div>
 
-            <form className="filter-panel" onSubmit={handleSearchSubmit}>
+            <form className="filter-panel filter-panel--mapa" onSubmit={handleSearchSubmit}>
+                <div className="panel-heading">
+                    <h3>Filtros del mapa</h3>
+                    <p>Consulta torres y alertamientos visibles sin modificar la visibilidad institucional.</p>
+                </div>
+
                 <div className="filter-grid">
                     <div className="field">
-                        <label htmlFor="mapa_fecha_inicio">fecha_inicio</label>
+                        <label htmlFor="mapa_fecha_inicio">Fecha inicio</label>
                         <input
                             id="mapa_fecha_inicio"
                             name="fecha_inicio"
@@ -460,7 +465,7 @@ function MapaPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="mapa_fecha_fin">fecha_fin</label>
+                        <label htmlFor="mapa_fecha_fin">Fecha fin</label>
                         <input
                             id="mapa_fecha_fin"
                             name="fecha_fin"
@@ -471,7 +476,7 @@ function MapaPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="mapa_id_estatus_alertamiento">id_estatus_alertamiento</label>
+                        <label htmlFor="mapa_id_estatus_alertamiento">Estatus</label>
                         <select
                             id="mapa_id_estatus_alertamiento"
                             name="id_estatus_alertamiento"
@@ -488,7 +493,7 @@ function MapaPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="mapa_id_torre">id_torre</label>
+                        <label htmlFor="mapa_id_torre">Torre</label>
                         <select
                             id="mapa_id_torre"
                             name="id_torre"
@@ -519,19 +524,22 @@ function MapaPage() {
             {errorMessage ? <p className="message">{errorMessage}</p> : null}
 
             <div className="summary-grid summary-grid--mapa">
-                <div className="summary-box">
+                <div className="summary-box map-summary-card">
+                    <span className="map-summary-card__label">Infraestructura</span>
                     <h3>Torres visibles</h3>
                     <p className="summary-number">{resumen.total_torres_visibles ?? 0}</p>
                     <p>{resumen.torres_sin_coordenadas ?? 0} sin coordenadas</p>
                 </div>
 
-                <div className="summary-box">
+                <div className="summary-box map-summary-card">
+                    <span className="map-summary-card__label">Operación</span>
                     <h3>Alertamientos devueltos</h3>
                     <p className="summary-number">{resumen.total_alertamientos_devuelto ?? 0}</p>
                     <p>{resumen.total_alertamientos_filtrados ?? 0} filtrados en backend</p>
                 </div>
 
-                <div className="summary-box">
+                <div className="summary-box map-summary-card map-summary-card--warning">
+                    <span className="map-summary-card__label">Calidad de datos</span>
                     <h3>Registros sin coordenadas</h3>
                     <p className="summary-number">{resumen.alertamientos_sin_coordenadas ?? 0}</p>
                     <p>Alertamientos no ubicables en el mapa</p>
@@ -549,7 +557,10 @@ function MapaPage() {
 
                 <aside className="map-side-panel">
                     <div>
-                        <h3 className="title title--small">Leyenda</h3>
+                        <div className="panel-heading">
+                            <h3>Leyenda</h3>
+                            <p>Marcadores diferenciados por tipo y estatus.</p>
+                        </div>
                         <div className="map-legend">
                             <span className="map-legend__item">
                                 <span className="map-marker-swatch map-marker-swatch--torre" />
@@ -575,7 +586,10 @@ function MapaPage() {
                     </div>
 
                     <div>
-                        <h3 className="title title--small">Alertamientos sin coordenadas</h3>
+                        <div className="panel-heading">
+                            <h3>Alertamientos sin coordenadas</h3>
+                            <p>Registros devueltos que no pueden ubicarse en el mapa.</p>
+                        </div>
                         {alertamientosSinCoordenadas.length === 0 ? (
                             <p className="field-hint">No hay alertamientos devueltos sin coordenadas.</p>
                         ) : (

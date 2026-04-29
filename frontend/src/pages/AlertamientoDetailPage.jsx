@@ -51,7 +51,7 @@ function getStatusUpdateErrorMessage(error) {
     const statusCode = error?.response?.status;
 
     if (statusCode === 400) {
-        return backendMessage || 'La transicion solicitada no es valida para este alertamiento.';
+        return backendMessage || 'La transición solicitada no es válida para este alertamiento.';
     }
 
     if (statusCode === 403) {
@@ -59,7 +59,7 @@ function getStatusUpdateErrorMessage(error) {
     }
 
     if (statusCode === 404) {
-        return backendMessage || 'El alertamiento ya no existe o dejo de ser visible para tu ambito.';
+        return backendMessage || 'El alertamiento ya no existe o dejó de ser visible para tu ámbito.';
     }
 
     if (statusCode === 409) {
@@ -82,6 +82,24 @@ function formatDateTime(value) {
 
 function normalizeCatalogName(value) {
     return typeof value === 'string' ? value.trim().toUpperCase() : '';
+}
+
+function getAlertamientoStatusClassName(statusName) {
+    const normalizedStatus = normalizeCatalogName(statusName);
+
+    if (normalizedStatus === 'CERRADO') {
+        return 'status-pill status-pill--closed';
+    }
+
+    if (normalizedStatus === 'EN_ATENCION') {
+        return 'status-pill status-pill--warning';
+    }
+
+    if (normalizedStatus === 'VALIDADO') {
+        return 'status-pill status-pill--active';
+    }
+
+    return 'status-pill status-pill--pending';
 }
 
 async function fetchAlertamientoContext(alertamientoId) {
@@ -127,7 +145,7 @@ function getStatusActionHint(detail, user, availableTransitions) {
     }
 
     if (availableTransitions.length > 0) {
-        return 'Selecciona la siguiente transicion operativa disponible para tu rol.';
+        return 'Selecciona la siguiente transición operativa disponible para tu rol.';
     }
 
     if (normalizeCatalogName(detail.estatus.nombre_estatus) === 'CERRADO') {
@@ -138,7 +156,7 @@ function getStatusActionHint(detail, user, availableTransitions) {
         return 'No fue posible determinar el rol autenticado para habilitar transiciones.';
     }
 
-    return 'Tu rol actual no tiene una transicion disponible para el estatus en que se encuentra este alertamiento.';
+    return 'Tu rol actual no tiene una transición disponible para el estatus en que se encuentra este alertamiento.';
 }
 
 function DetailPair({ label, value, mono = false }) {
@@ -147,6 +165,14 @@ function DetailPair({ label, value, mono = false }) {
             <strong>{label}:</strong>{' '}
             <span className={mono ? 'mono' : ''}>{value ?? 'Sin dato'}</span>
         </p>
+    );
+}
+
+function StatusBadge({ value }) {
+    return (
+        <span className={getAlertamientoStatusClassName(value)}>
+            {value || 'Sin estatus'}
+        </span>
     );
 }
 
@@ -289,13 +315,16 @@ function AlertamientoDetailPage() {
                         <div className="status-action-grid">
                             <section className="summary-box">
                                 <h3>Contexto de autorizacion</h3>
-                                <DetailPair label="rol_actual" value={user?.rol?.nombre_rol} />
-                                <DetailPair label="nivel_operativo" value={user?.nivel_operativo?.nombre_nivel} />
-                                <DetailPair label="estatus_actual" value={detail.estatus?.nombre_estatus} />
+                                <DetailPair label="Rol actual" value={user?.rol?.nombre_rol} />
+                                <DetailPair label="Nivel operativo" value={user?.nivel_operativo?.nombre_nivel} />
+                                <p>
+                                    <strong>Estatus actual:</strong>{' '}
+                                    <StatusBadge value={detail.estatus?.nombre_estatus} />
+                                </p>
                             </section>
 
                             <section className="summary-box">
-                                <h3>Transicion operativa</h3>
+                                <h3>Transición operativa</h3>
 
                                 {availableTransitions.length > 0 ? (
                                     <form className="status-action-form" onSubmit={handleStatusSubmit}>
@@ -343,48 +372,51 @@ function AlertamientoDetailPage() {
                     <div className="summary-grid">
                         <section className="summary-box">
                             <h3>Identificacion</h3>
-                            <DetailPair label="id_alertamiento" value={detail.id_alertamiento} mono />
-                            <DetailPair label="folio_alertamiento" value={detail.folio_alertamiento} mono />
-                            <DetailPair label="placa_detectada" value={detail.placa_detectada} mono />
-                            <DetailPair label="fecha_hora_deteccion" value={formatDateTime(detail.fecha_hora_deteccion)} />
+                            <DetailPair label="ID alertamiento" value={detail.id_alertamiento} mono />
+                            <DetailPair label="Folio" value={detail.folio_alertamiento} mono />
+                            <DetailPair label="Placa detectada" value={detail.placa_detectada} mono />
+                            <DetailPair label="Fecha deteccion" value={formatDateTime(detail.fecha_hora_deteccion)} />
                         </section>
 
                         <section className="summary-box">
                             <h3>Estatus y origen</h3>
-                            <DetailPair label="estatus" value={detail.estatus?.nombre_estatus} />
-                            <DetailPair label="orden_flujo" value={detail.estatus?.orden_flujo} mono />
-                            <DetailPair label="origen_registro" value={detail.origen_registro} />
-                            <DetailPair label="observaciones" value={detail.observaciones} />
+                            <p>
+                                <strong>Estatus:</strong>{' '}
+                                <StatusBadge value={detail.estatus?.nombre_estatus} />
+                            </p>
+                            <DetailPair label="Orden de flujo" value={detail.estatus?.orden_flujo} mono />
+                            <DetailPair label="Origen registro" value={detail.origen_registro} />
+                            <DetailPair label="Observaciones" value={detail.observaciones} />
                         </section>
 
                         <section className="summary-box">
                             <h3>Ubicacion de deteccion</h3>
-                            <DetailPair label="latitud_deteccion" value={detail.ubicacion_deteccion?.latitud_deteccion} mono />
-                            <DetailPair label="longitud_deteccion" value={detail.ubicacion_deteccion?.longitud_deteccion} mono />
-                            <DetailPair label="carril" value={detail.ubicacion_deteccion?.carril} />
-                            <DetailPair label="sentido_vial" value={detail.ubicacion_deteccion?.sentido_vial} />
+                            <DetailPair label="Latitud" value={detail.ubicacion_deteccion?.latitud_deteccion} mono />
+                            <DetailPair label="Longitud" value={detail.ubicacion_deteccion?.longitud_deteccion} mono />
+                            <DetailPair label="Carril" value={detail.ubicacion_deteccion?.carril} />
+                            <DetailPair label="Sentido vial" value={detail.ubicacion_deteccion?.sentido_vial} />
                         </section>
 
                         <section className="summary-box">
                             <h3>Usuario creador</h3>
-                            <DetailPair label="id_usuario" value={detail.usuario_creador?.id_usuario} mono />
-                            <DetailPair label="nombre_usuario" value={detail.usuario_creador?.nombre_usuario} mono />
-                            <DetailPair label="nombre_completo" value={detail.usuario_creador?.nombre_completo} />
+                            <DetailPair label="ID usuario" value={detail.usuario_creador?.id_usuario} mono />
+                            <DetailPair label="Usuario" value={detail.usuario_creador?.nombre_usuario} mono />
+                            <DetailPair label="Nombre completo" value={detail.usuario_creador?.nombre_completo} />
                         </section>
 
                         <section className="summary-box">
                             <h3>Contexto operativo</h3>
-                            <DetailPair label="torre" value={detail.contexto_operativo?.torre?.nombre_torre} />
-                            <DetailPair label="central" value={detail.contexto_operativo?.central?.nombre_central} />
-                            <DetailPair label="region" value={detail.contexto_operativo?.region?.nombre_region} />
-                            <DetailPair label="estado_operativo" value={detail.contexto_operativo?.estado_operativo?.nombre_estado} />
-                            <DetailPair label="territorio" value={detail.contexto_operativo?.territorio?.nombre_territorio} />
+                            <DetailPair label="Torre" value={detail.contexto_operativo?.torre?.nombre_torre} />
+                            <DetailPair label="Central" value={detail.contexto_operativo?.central?.nombre_central} />
+                            <DetailPair label="Region" value={detail.contexto_operativo?.region?.nombre_region} />
+                            <DetailPair label="Estado operativo" value={detail.contexto_operativo?.estado_operativo?.nombre_estado} />
+                            <DetailPair label="Territorio" value={detail.contexto_operativo?.territorio?.nombre_territorio} />
                         </section>
 
                         <section className="summary-box">
                             <h3>Fechas de control</h3>
-                            <DetailPair label="fecha_creacion" value={formatDateTime(detail.fechas_control?.fecha_creacion)} />
-                            <DetailPair label="fecha_actualizacion" value={formatDateTime(detail.fechas_control?.fecha_actualizacion)} />
+                            <DetailPair label="Fecha creacion" value={formatDateTime(detail.fechas_control?.fecha_creacion)} />
+                            <DetailPair label="Fecha actualizacion" value={formatDateTime(detail.fechas_control?.fecha_actualizacion)} />
                         </section>
                     </div>
 
@@ -410,7 +442,7 @@ function AlertamientoDetailPage() {
                                         <div className="timeline-item__marker" />
                                         <div className="timeline-item__content">
                                             <p className="timeline-item__title">
-                                                {evento.estatus?.nombre_estatus || 'Sin estatus'}
+                                                <StatusBadge value={evento.estatus?.nombre_estatus} />
                                             </p>
                                             <p className="timeline-item__meta">
                                                 {formatDateTime(evento.fecha_evento)}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import escudoGuardiaNacional from '../assets/escudo-guardia-nacional.png';
 import { useAuthStore } from '../store/auth.store';
 
 function AppLayout() {
@@ -19,15 +20,20 @@ function AppLayout() {
         <div className="app-layout">
             <header className="app-header">
                 <div className="app-header__brand">
-                    <p className="eyebrow">Plataforma Nacional de Alertamientos</p>
-                    <h1>Guardia Nacional</h1>
-                    <p className="app-header__meta">
-                        Usuario: <span className="mono">{user?.nombre_usuario || 'sin sesion'}</span>
-                    </p>
+                    <span className="app-header__seal" aria-hidden="true">
+                        <img src={escudoGuardiaNacional} alt="" />
+                    </span>
+                    <div>
+                        <p className="eyebrow">Plataforma Nacional de Alertamientos</p>
+                        <h1>Guardia Nacional</h1>
+                        <p className="app-header__meta">
+                            Sesión institucional: <span className="mono">{user?.nombre_usuario || 'sin sesión'}</span>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="app-header__actions">
-                    <nav className="app-nav" aria-label="Navegacion principal">
+                    <nav className="app-nav" aria-label="Navegación principal">
                         <NavLink
                             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
                             to="/dashboard"
@@ -57,7 +63,7 @@ function AppLayout() {
                     </nav>
 
                     <button className="button button--secondary" type="button" onClick={handleLogout}>
-                        Cerrar sesion
+                        Cerrar sesión
                     </button>
                 </div>
             </header>

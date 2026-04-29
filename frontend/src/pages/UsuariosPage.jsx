@@ -74,7 +74,7 @@ function buildRequestParams(searchParams) {
 
 function getAmbitoSummary(usuario) {
     if (!usuario?.ambito) {
-        return 'Sin ambito';
+        return 'Sin ámbito';
     }
 
     if (usuario.ambito.tipo === 'TORRE') {
@@ -191,7 +191,7 @@ function UsuariosPage() {
     }, []);
 
     // El listado se deriva por completo de la query string para que filtros y
-    // paginacion se puedan recargar o compartir sin perder el estado actual.
+    // paginación se puedan recargar o compartir sin perder el estado actual.
     useEffect(() => {
         let isMounted = true;
 
@@ -321,7 +321,7 @@ function UsuariosPage() {
         try {
             await fetchMe();
         } catch (_error) {
-            // Si el refresh fallara, la sesion ya tiene manejo propio desde el store.
+            // Si el refresh fallara, la sesión ya tiene manejo propio desde el store.
         }
     }
 
@@ -390,7 +390,7 @@ function UsuariosPage() {
                     <p className="eyebrow">Administracion Institucional</p>
                     <h2 className="title">Gestion de Usuarios</h2>
                     <p className="subtitle">
-                        Modulo administrativo para altas, edicion, activacion y asignacion de ambitos operativos.
+                        Módulo administrativo para altas, edición, activación y asignación de ámbitos operativos.
                     </p>
                 </div>
 
@@ -436,9 +436,14 @@ function UsuariosPage() {
             ) : null}
 
             <form className="filter-panel" onSubmit={handleSearchSubmit}>
+                <div className="panel-heading">
+                    <h3>Filtros administrativos</h3>
+                    <p>Busca usuarios por datos generales, estatus, rol o nivel operativo.</p>
+                </div>
+
                 <div className="filter-grid">
                     <div className="field">
-                        <label htmlFor="usuarios_search">search</label>
+                        <label htmlFor="usuarios_search">Búsqueda</label>
                         <input
                             id="usuarios_search"
                             name="search"
@@ -450,7 +455,7 @@ function UsuariosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="usuarios_activo">activo</label>
+                        <label htmlFor="usuarios_activo">Estatus</label>
                         <select
                             id="usuarios_activo"
                             name="activo"
@@ -464,7 +469,7 @@ function UsuariosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="usuarios_id_rol">rol</label>
+                        <label htmlFor="usuarios_id_rol">Rol</label>
                         <select
                             id="usuarios_id_rol"
                             name="id_rol"
@@ -482,7 +487,7 @@ function UsuariosPage() {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="usuarios_id_nivel_operativo">nivel_operativo</label>
+                        <label htmlFor="usuarios_id_nivel_operativo">Nivel operativo</label>
                         <select
                             id="usuarios_id_nivel_operativo"
                             name="id_nivel_operativo"
@@ -526,7 +531,7 @@ function UsuariosPage() {
                             <strong>Total:</strong> {pagination?.total_items ?? 0}
                         </p>
                         <p>
-                            <strong>Pagina:</strong> {pagination?.page ?? 1}
+                            <strong>Página:</strong> {pagination?.page ?? 1}
                             {' / '}
                             {pagination?.total_pages ?? 0}
                         </p>
@@ -539,14 +544,14 @@ function UsuariosPage() {
                         </div>
                     ) : (
                         <div className="table-wrapper">
-                            <table className="data-table data-table--users">
+                            <table className="data-table data-table--users data-table--comfortable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
                                         <th>Usuario</th>
                                         <th>Rol</th>
                                         <th>Nivel</th>
-                                        <th>Ambito</th>
+                                        <th>Ámbito</th>
                                         <th>Estatus</th>
                                         <th>Ultimo acceso</th>
                                         <th>Acciones</th>
@@ -571,7 +576,7 @@ function UsuariosPage() {
                                                 <td>{usuario.nivel_operativo?.nombre_nivel || 'Sin nivel'}</td>
                                                 <td>{getAmbitoSummary(usuario)}</td>
                                                 <td>
-                                                    <span className={`status-pill${usuario.activo ? '' : ' status-pill--inactive'}`}>
+                                                    <span className={`status-pill${usuario.activo ? ' status-pill--active' : ' status-pill--inactive'}`}>
                                                         {usuario.activo ? 'Activo' : 'Inactivo'}
                                                     </span>
                                                 </td>
@@ -617,11 +622,11 @@ function UsuariosPage() {
                             onClick={() => handleChangePage(currentPage - 1)}
                             disabled={!hasPreviousPage}
                         >
-                            Pagina anterior
+                            Página anterior
                         </button>
 
                         <span className="pagination-bar__text">
-                            Mostrando pagina {pagination?.page ?? 1} de {pagination?.total_pages ?? 0}
+                            Mostrando página {pagination?.page ?? 1} de {pagination?.total_pages ?? 0}
                         </span>
 
                         <button
@@ -630,7 +635,7 @@ function UsuariosPage() {
                             onClick={() => handleChangePage(currentPage + 1)}
                             disabled={!hasNextPage}
                         >
-                            Pagina siguiente
+                            Página siguiente
                         </button>
                     </div>
                 </>
