@@ -15,6 +15,15 @@ const EMPTY_FILTER_FORM = {
     id_territorio: ''
 };
 
+// Catalogo fijo de la BD V3. El usuario ve nombres claros, pero el filtro
+// conserva el valor tecnico id_estatus_alertamiento que espera el backend.
+const STATUS_FILTER_OPTIONS = [
+    { value: '1', label: 'Detectado' },
+    { value: '2', label: 'Validado' },
+    { value: '3', label: 'En atención' },
+    { value: '4', label: 'Cerrado' }
+];
+
 function getApiErrorMessage(error, fallbackMessage) {
     return error?.response?.data?.message || fallbackMessage;
 }
@@ -52,15 +61,37 @@ function buildRequestParams(searchParams) {
     return requestParams;
 }
 
-function formatDateTime(value) {
+function formatDateTimeParts(value) {
     if (!value) {
-        return 'Sin fecha';
+        return {
+            date: 'Sin fecha',
+            time: 'Sin hora'
+        };
     }
 
-    return new Intl.DateTimeFormat('es-MX', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-    }).format(new Date(value));
+    const date = new Date(value);
+
+    // Se conserva el mismo valor temporal y solo se separa visualmente fecha/hora
+    // para que la tabla sea mas legible en filas compactas.
+    return {
+        date: new Intl.DateTimeFormat('es-MX', {
+            dateStyle: 'medium'
+        }).format(date),
+        time: new Intl.DateTimeFormat('es-MX', {
+            timeStyle: 'short'
+        }).format(date)
+    };
+}
+
+function AlertamientoDateTime({ value }) {
+    const dateTime = formatDateTimeParts(value);
+
+    return (
+        <span className="table-date">
+            <strong>{dateTime.date}</strong>
+            <span>{dateTime.time}</span>
+        </span>
+    );
 }
 
 function getAlertamientoStatusClassName(statusName) {
@@ -93,9 +124,11 @@ function AlertamientosPage() {
         data: []
     });
     const [isCreateFormVisible, setIsCreateFormVisible] = useState(false);
+    const [areFiltersVisible, setAreFiltersVisible] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState(null);
     const user = useAuthStore((state) => state.user);
+    const filtersPanelBodyId = 'alertamientos-filters-body';
 
     const effectiveParams = useMemo(() => buildRequestParams(searchParams), [searchParams]);
 
@@ -216,31 +249,31 @@ function AlertamientosPage() {
     }
 
     return (
-        <section className="card card--wide">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">Módulo Operativo</p>
-                    <h2 className="title">Consulta de Alertamientos</h2>
+        <section className="card card--wide alertamientos-page">
+            <div className="section-heading section-heading--module">
+                <div className="section-heading__content">
+                    <p className="eyebrow">Módulo operativo</p>
+                    <h2 className="title">Consulta de alertamientos</h2>
                     <p className="subtitle">
                         El listado ya respeta la visibilidad institucional del usuario autenticado.
                     </p>
                 </div>
 
-                <div className="info-chip">
-                    <span className="info-chip__label">Visibilidad actual</span>
-                    <strong>{user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
-                </div>
-            </div>
+                <div className="section-heading__aside">
+                    <div className="info-chip info-chip--compact">
+                        <span className="info-chip__label">Visibilidad actual</span>
+                        <strong>{user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
+                    </div>
 
-            <div className="button-row section-actions">
-                <button
-                    className="button"
-                    type="button"
-                    onClick={handleOpenCreateForm}
-                    disabled={isCreateFormVisible}
-                >
-                    Nuevo alertamiento
-                </button>
+                    <button
+                        className="button"
+                        type="button"
+                        onClick={handleOpenCreateForm}
+                        disabled={isCreateFormVisible}
+                    >
+                        Nuevo alertamiento
+                    </button>
+                </div>
             </div>
 
             {isCreateFormVisible ? (
@@ -250,120 +283,146 @@ function AlertamientosPage() {
                 />
             ) : null}
 
-            <form className="filter-panel" onSubmit={handleSearchSubmit}>
-                <div className="panel-heading">
-                    <h3>Filtros de consulta</h3>
-                    <p>Refina el listado visible sin modificar el ámbito institucional aplicado por backend.</p>
-                </div>
-
-                <div className="filter-grid">
-                    <div className="field">
-                        <label htmlFor="fecha_inicio">Fecha inicio</label>
-                        <input
-                            id="fecha_inicio"
-                            name="fecha_inicio"
-                            type="date"
-                            value={filtersForm.fecha_inicio}
-                            onChange={handleFilterChange}
-                        />
+            <form
+                className={`filter-panel filter-panel--compact${areFiltersVisible ? '' : ' filter-panel--collapsed'}`}
+                onSubmit={handleSearchSubmit}
+            >
+                <div className="panel-heading panel-heading--toggle">
+                    <div>
+                        <h3>Filtros de consulta</h3>
+                        <p>Refina el listado visible sin modificar el ámbito institucional aplicado.</p>
                     </div>
-
-                    <div className="field">
-                        <label htmlFor="fecha_fin">Fecha fin</label>
-                        <input
-                            id="fecha_fin"
-                            name="fecha_fin"
-                            type="date"
-                            value={filtersForm.fecha_fin}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="placa">Placa</label>
-                        <input
-                            id="placa"
-                            name="placa"
-                            type="text"
-                            placeholder="ABC123"
-                            value={filtersForm.placa}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="id_torre">ID torre</label>
-                        <input
-                            id="id_torre"
-                            name="id_torre"
-                            type="number"
-                            min="1"
-                            value={filtersForm.id_torre}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="id_estatus_alertamiento">ID estatus</label>
-                        <input
-                            id="id_estatus_alertamiento"
-                            name="id_estatus_alertamiento"
-                            type="number"
-                            min="1"
-                            value={filtersForm.id_estatus_alertamiento}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="id_region">ID region</label>
-                        <input
-                            id="id_region"
-                            name="id_region"
-                            type="number"
-                            min="1"
-                            value={filtersForm.id_region}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="id_estado">ID estado</label>
-                        <input
-                            id="id_estado"
-                            name="id_estado"
-                            type="number"
-                            min="1"
-                            value={filtersForm.id_estado}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label htmlFor="id_territorio">ID territorio</label>
-                        <input
-                            id="id_territorio"
-                            name="id_territorio"
-                            type="number"
-                            min="1"
-                            value={filtersForm.id_territorio}
-                            onChange={handleFilterChange}
-                        />
-                    </div>
-                </div>
-
-                <div className="button-row">
-                    <button className="button" type="submit">
-                        Aplicar filtros
-                    </button>
 
                     <button
-                        className="button button--ghost"
+                        className="button button--ghost button--small filter-panel__toggle"
                         type="button"
-                        onClick={handleResetFilters}
+                        aria-expanded={areFiltersVisible}
+                        aria-controls={filtersPanelBodyId}
+                        onClick={() => setAreFiltersVisible((currentValue) => !currentValue)}
                     >
-                        Limpiar filtros
+                        {areFiltersVisible ? 'Ocultar filtros' : 'Mostrar filtros'}
                     </button>
+                </div>
+
+                <div
+                    id={filtersPanelBodyId}
+                    className="filter-panel__body"
+                    hidden={!areFiltersVisible}
+                >
+                    <div className="filter-grid filter-grid--alertamientos">
+                        <div className="field">
+                            <label htmlFor="fecha_inicio">Fecha inicio</label>
+                            <input
+                                id="fecha_inicio"
+                                name="fecha_inicio"
+                                type="date"
+                                value={filtersForm.fecha_inicio}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="fecha_fin">Fecha fin</label>
+                            <input
+                                id="fecha_fin"
+                                name="fecha_fin"
+                                type="date"
+                                value={filtersForm.fecha_fin}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="placa">Placa</label>
+                            <input
+                                id="placa"
+                                name="placa"
+                                type="text"
+                                placeholder="ABC123"
+                                value={filtersForm.placa}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="id_estatus_alertamiento">Estatus</label>
+                            <select
+                                id="id_estatus_alertamiento"
+                                name="id_estatus_alertamiento"
+                                value={filtersForm.id_estatus_alertamiento}
+                                onChange={handleFilterChange}
+                            >
+                                <option value=""></option>
+                                {STATUS_FILTER_OPTIONS.map((statusOption) => (
+                                    <option key={statusOption.value} value={statusOption.value}>
+                                        {statusOption.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="id_torre">Torre</label>
+                            <input
+                                id="id_torre"
+                                name="id_torre"
+                                type="number"
+                                min="1"
+                                value={filtersForm.id_torre}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="id_estado">Estado</label>
+                            <input
+                                id="id_estado"
+                                name="id_estado"
+                                type="number"
+                                min="1"
+                                value={filtersForm.id_estado}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="id_region">Región</label>
+                            <input
+                                id="id_region"
+                                name="id_region"
+                                type="number"
+                                min="1"
+                                value={filtersForm.id_region}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="id_territorio">Territorio</label>
+                            <input
+                                id="id_territorio"
+                                name="id_territorio"
+                                type="number"
+                                min="1"
+                                value={filtersForm.id_territorio}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="button-row">
+                        <button className="button" type="submit">
+                            Aplicar filtros
+                        </button>
+
+                        <button
+                            className="button button--ghost"
+                            type="button"
+                            onClick={handleResetFilters}
+                        >
+                            Limpiar filtros
+                        </button>
+                    </div>
                 </div>
             </form>
 
@@ -373,7 +432,7 @@ function AlertamientosPage() {
                 <p className="loading-state">Consultando alertamientos visibles para tu ámbito...</p>
             ) : (
                 <>
-                    <div className="results-summary">
+                    <div className="results-summary results-summary--table">
                         <p>
                             <strong>Total:</strong> {pagination?.total_items ?? 0}
                         </p>
@@ -393,12 +452,12 @@ function AlertamientosPage() {
                         </div>
                     ) : (
                         <div className="table-wrapper">
-                            <table className="data-table data-table--comfortable">
+                            <table className="data-table data-table--alertamientos data-table--comfortable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
                                         <th>Placa</th>
-                                        <th>Fecha deteccion</th>
+                                        <th>Fecha detección</th>
                                         <th>Estatus</th>
                                         <th>Torre</th>
                                         <th>Estado</th>
@@ -411,7 +470,9 @@ function AlertamientosPage() {
                                         <tr key={alertamiento.id_alertamiento}>
                                             <td className="mono">{alertamiento.id_alertamiento}</td>
                                             <td className="mono">{alertamiento.placa_detectada}</td>
-                                            <td>{formatDateTime(alertamiento.fecha_hora_deteccion)}</td>
+                                            <td>
+                                                <AlertamientoDateTime value={alertamiento.fecha_hora_deteccion} />
+                                            </td>
                                             <td>
                                                 <span className={getAlertamientoStatusClassName(alertamiento.estatus?.nombre_estatus)}>
                                                     {alertamiento.estatus?.nombre_estatus || 'Sin estatus'}
@@ -422,10 +483,10 @@ function AlertamientosPage() {
                                             <td>{alertamiento.territorio?.nombre_territorio || 'Sin territorio'}</td>
                                             <td>
                                                 <Link
-                                                    className="button button--inline"
+                                                    className="button button--inline button--small table-detail-link"
                                                     to={`/alertamientos/${alertamiento.id_alertamiento}`}
                                                 >
-                                                    Ver detalle
+                                                    Detalle
                                                 </Link>
                                             </td>
                                         </tr>

@@ -103,6 +103,76 @@ function formatDateTime(value) {
     }).format(new Date(value));
 }
 
+function getUserInitials(usuario) {
+    const displayName = usuario?.nombre_completo || usuario?.nombre_usuario || 'Usuario';
+    const initials = displayName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((namePart) => namePart[0])
+        .join('');
+
+    return initials.toUpperCase();
+}
+
+function UsuariosIcon({ type }) {
+    const icons = {
+        users: (
+            <>
+                <circle cx="9" cy="8" r="3" />
+                <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+                <path d="M16 11a2.5 2.5 0 1 0 0-5" />
+                <path d="M17 20h3.5a4.5 4.5 0 0 0-4.5-4.5" />
+            </>
+        ),
+        active: (
+            <>
+                <path d="M12 3l7 4v5c0 4.3-2.7 7.1-7 8.8-4.3-1.7-7-4.5-7-8.8V7l7-4z" />
+                <path d="M9 12l2 2 4-4" />
+            </>
+        ),
+        inactive: (
+            <>
+                <circle cx="12" cy="12" r="8" />
+                <path d="M8 8l8 8" />
+            </>
+        ),
+        role: (
+            <>
+                <rect x="4" y="5" width="16" height="14" rx="2" />
+                <path d="M8 10h8" />
+                <path d="M8 14h5" />
+            </>
+        ),
+        plus: (
+            <>
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 8v8" />
+                <path d="M8 12h8" />
+            </>
+        ),
+        filter: (
+            <>
+                <path d="M4 6h16" />
+                <path d="M7 12h10" />
+                <path d="M10 18h4" />
+            </>
+        ),
+        admin: (
+            <>
+                <path d="M12 3l7 4v5c0 4.3-2.7 7.1-7 8.8-4.3-1.7-7-4.5-7-8.8V7l7-4z" />
+                <path d="M12 8l1.1 2.3 2.5.3-1.8 1.7.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.7 2.5-.3L12 8z" />
+            </>
+        )
+    };
+
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            {icons[type] || icons.users}
+        </svg>
+    );
+}
+
 function UsuariosPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [filtersForm, setFiltersForm] = useState(() => createFiltersFromSearchParams(searchParams));
@@ -119,6 +189,7 @@ function UsuariosPage() {
     const [isFormLoading, setIsFormLoading] = useState(false);
     const [actionUserId, setActionUserId] = useState(null);
     const [reloadCounter, setReloadCounter] = useState(0);
+    const [areFiltersExpanded, setAreFiltersExpanded] = useState(true);
     const {
         user: authenticatedUser,
         fetchMe
@@ -382,33 +453,92 @@ function UsuariosPage() {
     const pagination = listResponse.pagination;
     const hasPreviousPage = currentPage > 1;
     const hasNextPage = pagination ? currentPage < pagination.total_pages : false;
+    const usuarios = listResponse.data || [];
+    const activeUsersInPage = usuarios.filter((usuario) => usuario.activo === true).length;
+    const inactiveUsersInPage = usuarios.filter((usuario) => usuario.activo !== true).length;
+    const adminUsersInPage = usuarios.filter((usuario) => usuario.rol?.nombre_rol === 'ADMINISTRADOR').length;
 
     return (
-        <section className="card card--wide">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">Administracion Institucional</p>
-                    <h2 className="title">Gestion de Usuarios</h2>
-                    <p className="subtitle">
-                        Módulo administrativo para altas, edición, activación y asignación de ámbitos operativos.
-                    </p>
+        <section className="usuarios-page">
+            <div className="usuarios-shell">
+                <div className="section-heading usuarios-hero">
+                    <div className="usuarios-hero__content">
+                        <p className="eyebrow">Administración institucional</p>
+                        <h2 className="title">Gestión de usuarios</h2>
+                        <p className="subtitle usuarios-hero__subtitle">
+                            Módulo administrativo para altas, edición, activación y asignación de ámbitos operativos.
+                        </p>
+                    </div>
+
+                    <div className="usuarios-hero__aside">
+                        <div className="info-chip usuarios-role-summary">
+                            <span className="usuarios-role-summary__icon" aria-hidden="true">
+                                <UsuariosIcon type="role" />
+                            </span>
+                            <div>
+                                <span className="info-chip__label">Rol actual</span>
+                                <strong>{authenticatedUser?.rol?.nombre_rol || 'Sin rol'}</strong>
+                            </div>
+                        </div>
+
+                        <button
+                            className="button usuarios-primary-action"
+                            type="button"
+                            onClick={handleOpenCreateForm}
+                            disabled={isCatalogsLoading || Boolean(catalogErrorMessage)}
+                        >
+                            <span className="button__icon" aria-hidden="true">
+                                <UsuariosIcon type="plus" />
+                            </span>
+                            Nuevo usuario
+                        </button>
+                    </div>
                 </div>
 
-                <div className="info-chip">
-                    <span className="info-chip__label">Rol actual</span>
-                    <strong>{authenticatedUser?.rol?.nombre_rol || 'Sin rol'}</strong>
-                </div>
-            </div>
+            <div className="usuarios-kpi-grid">
+                <article className="usuarios-kpi-card usuarios-kpi-card--total">
+                    <span className="usuarios-kpi-card__icon">
+                        <UsuariosIcon type="users" />
+                    </span>
+                    <div>
+                        <span>Total de usuarios</span>
+                        <strong>{pagination?.total_items ?? 0}</strong>
+                        <p>Total filtrado</p>
+                    </div>
+                </article>
 
-            <div className="button-row section-actions">
-                <button
-                    className="button"
-                    type="button"
-                    onClick={handleOpenCreateForm}
-                    disabled={isCatalogsLoading || Boolean(catalogErrorMessage)}
-                >
-                    Nuevo usuario
-                </button>
+                <article className="usuarios-kpi-card usuarios-kpi-card--active">
+                    <span className="usuarios-kpi-card__icon usuarios-kpi-card__icon--active">
+                        <UsuariosIcon type="active" />
+                    </span>
+                    <div>
+                        <span>Activos</span>
+                        <strong>{activeUsersInPage}</strong>
+                        <p>En esta página</p>
+                    </div>
+                </article>
+
+                <article className="usuarios-kpi-card usuarios-kpi-card--inactive">
+                    <span className="usuarios-kpi-card__icon usuarios-kpi-card__icon--inactive">
+                        <UsuariosIcon type="inactive" />
+                    </span>
+                    <div>
+                        <span>Inactivos</span>
+                        <strong>{inactiveUsersInPage}</strong>
+                        <p>En esta página</p>
+                    </div>
+                </article>
+
+                <article className="usuarios-kpi-card usuarios-kpi-card--admin">
+                    <span className="usuarios-kpi-card__icon usuarios-kpi-card__icon--admin">
+                        <UsuariosIcon type="admin" />
+                    </span>
+                    <div>
+                        <span>Administradores</span>
+                        <strong>{adminUsersInPage}</strong>
+                        <p>En esta página</p>
+                    </div>
+                </article>
             </div>
 
             {feedbackMessage ? (
@@ -435,14 +565,35 @@ function UsuariosPage() {
                 />
             ) : null}
 
-            <form className="filter-panel" onSubmit={handleSearchSubmit}>
-                <div className="panel-heading">
-                    <h3>Filtros administrativos</h3>
-                    <p>Busca usuarios por datos generales, estatus, rol o nivel operativo.</p>
+            <form
+                className={`filter-panel usuarios-filter-panel${areFiltersExpanded ? '' : ' usuarios-filter-panel--collapsed'}`}
+                onSubmit={handleSearchSubmit}
+            >
+                <div className="panel-heading usuarios-filter-heading">
+                    <div className="usuarios-filter-heading__title">
+                        <span className="usuarios-filter-heading__icon" aria-hidden="true">
+                            <UsuariosIcon type="filter" />
+                        </span>
+                        <div>
+                            <h3>Filtros administrativos</h3>
+                            <p>Busca usuarios por datos generales, estatus, rol o nivel operativo.</p>
+                        </div>
+                    </div>
+
+                    <button
+                        className="button button--ghost usuarios-filter-toggle"
+                        type="button"
+                        onClick={() => setAreFiltersExpanded((currentValue) => !currentValue)}
+                        aria-expanded={areFiltersExpanded}
+                    >
+                        {areFiltersExpanded ? 'Ocultar filtros' : 'Mostrar filtros'}
+                        <span aria-hidden="true">{areFiltersExpanded ? '−' : '+'}</span>
+                    </button>
                 </div>
 
-                <div className="filter-grid">
-                    <div className="field">
+                <div className="usuarios-filter-body" hidden={!areFiltersExpanded}>
+                <div className="filter-grid usuarios-filter-grid">
+                    <div className="field usuarios-filter-field usuarios-filter-field--search">
                         <label htmlFor="usuarios_search">Búsqueda</label>
                         <input
                             id="usuarios_search"
@@ -454,7 +605,7 @@ function UsuariosPage() {
                         />
                     </div>
 
-                    <div className="field">
+                    <div className="field usuarios-filter-field">
                         <label htmlFor="usuarios_activo">Estatus</label>
                         <select
                             id="usuarios_activo"
@@ -468,7 +619,7 @@ function UsuariosPage() {
                         </select>
                     </div>
 
-                    <div className="field">
+                    <div className="field usuarios-filter-field">
                         <label htmlFor="usuarios_id_rol">Rol</label>
                         <select
                             id="usuarios_id_rol"
@@ -486,7 +637,7 @@ function UsuariosPage() {
                         </select>
                     </div>
 
-                    <div className="field">
+                    <div className="field usuarios-filter-field">
                         <label htmlFor="usuarios_id_nivel_operativo">Nivel operativo</label>
                         <select
                             id="usuarios_id_nivel_operativo"
@@ -505,18 +656,22 @@ function UsuariosPage() {
                     </div>
                 </div>
 
-                <div className="button-row">
-                    <button className="button" type="submit">
+                <div className="button-row usuarios-filter-actions">
+                    <button className="button usuarios-filter-submit" type="submit">
+                        <span className="button__icon" aria-hidden="true">
+                            <UsuariosIcon type="filter" />
+                        </span>
                         Aplicar filtros
                     </button>
 
                     <button
-                        className="button button--ghost"
+                        className="button button--ghost usuarios-filter-reset"
                         type="button"
                         onClick={handleResetFilters}
                     >
                         Limpiar filtros
                     </button>
+                </div>
                 </div>
             </form>
 
@@ -526,14 +681,18 @@ function UsuariosPage() {
                 <p className="loading-state">Consultando usuarios institucionales...</p>
             ) : (
                 <>
-                    <div className="results-summary">
-                        <p>
-                            <strong>Total:</strong> {pagination?.total_items ?? 0}
+                    <div className="results-summary usuarios-results-summary">
+                        <p className="usuarios-results-summary__item">
+                            <span>Total</span>
+                            <strong>{pagination?.total_items ?? 0}</strong>
                         </p>
-                        <p>
-                            <strong>Página:</strong> {pagination?.page ?? 1}
-                            {' / '}
-                            {pagination?.total_pages ?? 0}
+                        <p className="usuarios-results-summary__item">
+                            <span>Página</span>
+                            <strong>
+                                {pagination?.page ?? 1}
+                                {' / '}
+                                {pagination?.total_pages ?? 0}
+                            </strong>
                         </p>
                     </div>
 
@@ -543,8 +702,8 @@ function UsuariosPage() {
                             <p>No se encontraron usuarios con los filtros actuales.</p>
                         </div>
                     ) : (
-                        <div className="table-wrapper">
-                            <table className="data-table data-table--users data-table--comfortable">
+                        <div className="table-wrapper usuarios-table-wrapper">
+                            <table className="data-table data-table--users data-table--comfortable usuarios-table">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -553,7 +712,7 @@ function UsuariosPage() {
                                         <th>Nivel</th>
                                         <th>Ámbito</th>
                                         <th>Estatus</th>
-                                        <th>Ultimo acceso</th>
+                                        <th>Último acceso</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -564,15 +723,24 @@ function UsuariosPage() {
 
                                         return (
                                             <tr key={usuario.id_usuario}>
-                                                <td className="mono">{usuario.id_usuario}</td>
+                                                <td className="mono usuarios-table__id">{usuario.id_usuario}</td>
                                                 <td>
-                                                    <div className="table-cell-stack">
-                                                        <strong>{usuario.nombre_usuario}</strong>
-                                                        <span>{usuario.nombre_completo}</span>
-                                                        <span className="mono">{usuario.correo_electronico}</span>
+                                                    <div className="usuarios-user-profile">
+                                                        <span className="usuarios-user-avatar" aria-hidden="true">
+                                                            {getUserInitials(usuario)}
+                                                        </span>
+                                                        <div className="table-cell-stack usuarios-user-cell">
+                                                            <strong>{usuario.nombre_usuario}</strong>
+                                                            <span>{usuario.nombre_completo}</span>
+                                                            <span className="mono usuarios-user-cell__email">{usuario.correo_electronico}</span>
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td>{usuario.rol?.nombre_rol || 'Sin rol'}</td>
+                                                <td>
+                                                    <span className={`usuarios-role-badge${usuario.rol?.nombre_rol === 'ADMINISTRADOR' ? ' usuarios-role-badge--admin' : ''}`}>
+                                                        {usuario.rol?.nombre_rol || 'Sin rol'}
+                                                    </span>
+                                                </td>
                                                 <td>{usuario.nivel_operativo?.nombre_nivel || 'Sin nivel'}</td>
                                                 <td>{getAmbitoSummary(usuario)}</td>
                                                 <td>
@@ -580,11 +748,15 @@ function UsuariosPage() {
                                                         {usuario.activo ? 'Activo' : 'Inactivo'}
                                                     </span>
                                                 </td>
-                                                <td>{formatDateTime(usuario.fecha_ultimo_acceso)}</td>
                                                 <td>
-                                                    <div className="table-actions">
+                                                    <span className="usuarios-last-access">
+                                                        {formatDateTime(usuario.fecha_ultimo_acceso)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="table-actions usuarios-table-actions">
                                                         <button
-                                                            className="button button--ghost button--small"
+                                                            className="button button--ghost button--small usuarios-action-button usuarios-action-button--edit"
                                                             type="button"
                                                             onClick={() => handleOpenEditForm(usuario.id_usuario)}
                                                             disabled={isActionPending || isCatalogsLoading || Boolean(catalogErrorMessage)}
@@ -593,7 +765,7 @@ function UsuariosPage() {
                                                         </button>
 
                                                         <button
-                                                            className={`button button--small${usuario.activo ? ' button--secondary' : ''}`}
+                                                            className={`button button--small usuarios-action-button${usuario.activo ? ' button--secondary usuarios-action-button--deactivate' : ' usuarios-action-button--activate'}`}
                                                             type="button"
                                                             onClick={() => handleToggleUsuarioActive(usuario)}
                                                             disabled={isActionPending || (isCurrentUser && usuario.activo)}
@@ -640,6 +812,7 @@ function UsuariosPage() {
                     </div>
                 </>
             )}
+            </div>
         </section>
     );
 }

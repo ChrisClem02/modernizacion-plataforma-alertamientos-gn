@@ -159,11 +159,17 @@ function getStatusActionHint(detail, user, availableTransitions) {
     return 'Tu rol actual no tiene una transición disponible para el estatus en que se encuentra este alertamiento.';
 }
 
-function DetailPair({ label, value, mono = false }) {
+function DetailPair({ label, value, mono = false, hideWhenEmpty = false }) {
+    const hasValue = value !== undefined && value !== null && String(value).trim() !== '';
+
+    if (hideWhenEmpty && !hasValue) {
+        return null;
+    }
+
     return (
         <p>
             <strong>{label}:</strong>{' '}
-            <span className={mono ? 'mono' : ''}>{value ?? 'Sin dato'}</span>
+            <span className={mono ? 'mono' : ''}>{hasValue ? value : 'Sin dato'}</span>
         </p>
     );
 }
@@ -173,6 +179,83 @@ function StatusBadge({ value }) {
         <span className={getAlertamientoStatusClassName(value)}>
             {value || 'Sin estatus'}
         </span>
+    );
+}
+
+function DetailIcon({ type }) {
+    const icons = {
+        status: (
+            <>
+                <path d="M12 3l7 3v5c0 4.5-2.8 7.5-7 9-4.2-1.5-7-4.5-7-9V6l7-3z" />
+                <path d="M9 12l2 2 4-4" />
+            </>
+        ),
+        level: (
+            <>
+                <path d="M12 3l8 4-8 4-8-4 8-4z" />
+                <path d="M4 12l8 4 8-4" />
+                <path d="M4 17l8 4 8-4" />
+            </>
+        ),
+        role: (
+            <>
+                <rect x="4" y="5" width="16" height="14" rx="2" />
+                <path d="M8 9h8" />
+                <path d="M8 13h5" />
+                <circle cx="16.5" cy="14.5" r="1.7" />
+            </>
+        ),
+        date: (
+            <>
+                <rect x="4" y="5" width="16" height="15" rx="2" />
+                <path d="M8 3v4" />
+                <path d="M16 3v4" />
+                <path d="M4 10h16" />
+                <path d="M12 14v3" />
+                <path d="M12 17h3" />
+            </>
+        ),
+        identification: (
+            <>
+                <rect x="4" y="5" width="16" height="14" rx="2" />
+                <path d="M8 10h8" />
+                <path d="M8 14h5" />
+            </>
+        ),
+        location: (
+            <>
+                <path d="M12 21s6-5.1 6-11a6 6 0 0 0-12 0c0 5.9 6 11 6 11z" />
+                <circle cx="12" cy="10" r="2" />
+            </>
+        ),
+        source: (
+            <>
+                <path d="M5 12a7 7 0 0 1 14 0" />
+                <path d="M8 12a4 4 0 0 1 8 0" />
+                <path d="M12 12v7" />
+                <path d="M9 19h6" />
+            </>
+        ),
+        user: (
+            <>
+                <circle cx="12" cy="8" r="3" />
+                <path d="M5 20a7 7 0 0 1 14 0" />
+            </>
+        ),
+        refresh: (
+            <>
+                <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" />
+                <path d="M4 4v4h4" />
+                <path d="M4 13a8 8 0 0 0 14.5 4.5L20 16" />
+                <path d="M20 20v-4h-4" />
+            </>
+        )
+    };
+
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            {icons[type] || icons.identification}
+        </svg>
     );
 }
 
@@ -192,6 +275,10 @@ function AlertamientoDetailPage() {
 
     const availableTransitions = getAvailableStatusTransitions(detail, user);
     const statusActionHint = getStatusActionHint(detail, user, availableTransitions);
+    const executiveDate = detail?.fechas_control?.fecha_actualizacion
+        || detail?.fechas_control?.fecha_creacion
+        || detail?.fecha_hora_deteccion;
+    const detectionOrCreationDate = detail?.fecha_hora_deteccion || detail?.fechas_control?.fecha_creacion;
 
     useEffect(() => {
         let isMounted = true;
@@ -273,17 +360,18 @@ function AlertamientoDetailPage() {
     }
 
     return (
-        <section className="card card--wide">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">Detalle Operativo</p>
-                    <h2 className="title">Alertamiento #{id}</h2>
+        <section className="card card--wide alertamiento-detail-page">
+            <div className="section-heading section-heading--module alertamiento-detail-heading">
+                <div className="section-heading__content">
+                    <p className="breadcrumb-text">Alertamientos &gt; Detalle</p>
+                    <p className="eyebrow">Detalle operativo</p>
+                    <h2 className="title">Detalle de Alertamiento</h2>
                     <p className="subtitle">
-                        Consulta detallada del registro y su historial cronologico.
+                        Consulta detallada del registro y su historial cronológico.
                     </p>
                 </div>
 
-                <div className="button-row">
+                <div className="button-row alertamiento-detail-heading__actions">
                     <Link className="button button--ghost" to="/alertamientos">
                         Volver al listado
                     </Link>
@@ -302,163 +390,301 @@ function AlertamientoDetailPage() {
 
             {detail ? (
                 <>
-                    <section className="status-action-panel">
-                        <div className="section-heading section-heading--compact">
-                            <div>
-                                <h3 className="title title--small">Cambio de estatus</h3>
-                                <p className="subtitle subtitle--small">
-                                    {statusActionHint}
-                                </p>
-                            </div>
+                    <section className="detail-executive-summary">
+                        <div className="detail-executive-summary__title">
+                            <span>Folio / Placa principal</span>
+                            <strong className="mono">{detail.placa_detectada || detail.folio_alertamiento || 'Sin placa'}</strong>
                         </div>
 
-                        <div className="status-action-grid">
-                            <section className="summary-box">
-                                <h3>Contexto de autorizacion</h3>
-                                <DetailPair label="Rol actual" value={user?.rol?.nombre_rol} />
-                                <DetailPair label="Nivel operativo" value={user?.nivel_operativo?.nombre_nivel} />
-                                <p>
-                                    <strong>Estatus actual:</strong>{' '}
+                        <div className="detail-executive-summary__grid">
+                            <div className="detail-executive-summary__metric detail-executive-summary__metric--status">
+                                <span className="detail-executive-summary__metric-icon">
+                                    <DetailIcon type="status" />
+                                </span>
+                                <div className="detail-executive-summary__metric-copy">
+                                    <span className="detail-executive-summary__metric-label">Estatus actual</span>
                                     <StatusBadge value={detail.estatus?.nombre_estatus} />
-                                </p>
+                                </div>
+                            </div>
+                            <div className="detail-executive-summary__metric">
+                                <span className="detail-executive-summary__metric-icon">
+                                    <DetailIcon type="level" />
+                                </span>
+                                <div className="detail-executive-summary__metric-copy">
+                                    <span className="detail-executive-summary__metric-label">Nivel operativo</span>
+                                    <strong>{user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
+                                </div>
+                            </div>
+                            <div className="detail-executive-summary__metric">
+                                <span className="detail-executive-summary__metric-icon">
+                                    <DetailIcon type="role" />
+                                </span>
+                                <div className="detail-executive-summary__metric-copy">
+                                    <span className="detail-executive-summary__metric-label">Rol actual</span>
+                                    <strong>{user?.rol?.nombre_rol || 'Sin rol'}</strong>
+                                </div>
+                            </div>
+                            <div className="detail-executive-summary__metric">
+                                <span className="detail-executive-summary__metric-icon">
+                                    <DetailIcon type="date" />
+                                </span>
+                                <div className="detail-executive-summary__metric-copy">
+                                    <span className="detail-executive-summary__metric-label">Fecha de control</span>
+                                    <strong>{formatDateTime(executiveDate)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="alertamiento-detail-layout">
+                        <div className="alertamiento-detail-main">
+                            <section className="summary-box detail-general-card">
+                                <div className="detail-general-card__heading">
+                                    <div className="detail-general-card__title-row">
+                                        <span className="detail-general-card__icon" aria-hidden="true">
+                                            <DetailIcon type="identification" />
+                                        </span>
+                                        <div>
+                                            <h3>Información general del alertamiento</h3>
+                                            <p>Datos principales del registro, su origen y contexto operativo visible.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="detail-general-grid">
+                                    <section className="detail-general-section">
+                                        <h4>
+                                            <span className="detail-general-section__icon" aria-hidden="true">
+                                                <DetailIcon type="identification" />
+                                            </span>
+                                            <span>Identificación</span>
+                                        </h4>
+                                        <DetailPair label="ID alertamiento" value={detail.id_alertamiento} mono />
+                                        <DetailPair label="Folio" value={detail.folio_alertamiento} mono />
+                                        <DetailPair label="Placa" value={detail.placa_detectada} mono hideWhenEmpty />
+                                        <DetailPair label="Fecha/hora de detección" value={formatDateTime(detectionOrCreationDate)} />
+                                        <DetailPair
+                                            label="Fecha de control"
+                                            value={executiveDate ? formatDateTime(executiveDate) : null}
+                                            hideWhenEmpty
+                                        />
+                                    </section>
+
+                                    <section className="detail-general-section">
+                                        <h4>
+                                            <span className="detail-general-section__icon" aria-hidden="true">
+                                                <DetailIcon type="location" />
+                                            </span>
+                                            <span>Ubicación de detección</span>
+                                        </h4>
+                                        <DetailPair label="Latitud" value={detail.ubicacion_deteccion?.latitud_deteccion} mono />
+                                        <DetailPair label="Longitud" value={detail.ubicacion_deteccion?.longitud_deteccion} mono />
+                                        <DetailPair label="Entidad operativa" value={detail.contexto_operativo?.estado_operativo?.nombre_estado} hideWhenEmpty />
+                                        <DetailPair label="Torre asociada" value={detail.contexto_operativo?.torre?.nombre_torre} hideWhenEmpty />
+                                        <DetailPair label="Region operativa" value={detail.contexto_operativo?.region?.nombre_region} hideWhenEmpty />
+                                        <DetailPair label="Territorio" value={detail.contexto_operativo?.territorio?.nombre_territorio} hideWhenEmpty />
+                                    </section>
+
+                                    <section className="detail-general-section">
+                                        <h4>
+                                            <span className="detail-general-section__icon" aria-hidden="true">
+                                                <DetailIcon type="source" />
+                                            </span>
+                                            <span>Origen / estatus</span>
+                                        </h4>
+                                        <p>
+                                            <strong>Estatus:</strong>{' '}
+                                            <StatusBadge value={detail.estatus?.nombre_estatus} />
+                                        </p>
+                                        <DetailPair label="Fuente de información" value={detail.origen_registro} hideWhenEmpty />
+                                        <DetailPair
+                                            label="Fecha de actualización"
+                                            value={detail.fechas_control?.fecha_actualizacion
+                                                ? formatDateTime(detail.fechas_control.fecha_actualizacion)
+                                                : null}
+                                            hideWhenEmpty
+                                        />
+                                        <DetailPair label="Observaciones" value={detail.observaciones} hideWhenEmpty />
+                                    </section>
+
+                                    <section className="detail-general-section">
+                                        <h4>
+                                            <span className="detail-general-section__icon" aria-hidden="true">
+                                                <DetailIcon type="user" />
+                                            </span>
+                                            <span>Usuario creador</span>
+                                        </h4>
+                                        <DetailPair label="Usuario creador" value={detail.usuario_creador?.nombre_usuario} mono />
+                                        <DetailPair label="Nombre completo" value={detail.usuario_creador?.nombre_completo} hideWhenEmpty />
+                                        <DetailPair
+                                            label="Registro asociado"
+                                            value={detail.fechas_control?.fecha_creacion
+                                                ? formatDateTime(detail.fechas_control.fecha_creacion)
+                                                : null}
+                                            hideWhenEmpty
+                                        />
+                                    </section>
+                                </div>
                             </section>
 
-                            <section className="summary-box">
-                                <h3>Transición operativa</h3>
+                            <section className="history-section detail-history-section">
+                                <div className="section-heading section-heading--compact">
+                                    <div>
+                                        <h3 className="title title--small">Historial del alertamiento</h3>
+                                        <p className="subtitle subtitle--small">
+                                            La línea de tiempo se muestra en orden cronológico ascendente.
+                                        </p>
+                                    </div>
+                                </div>
 
-                                {availableTransitions.length > 0 ? (
-                                    <form className="status-action-form" onSubmit={handleStatusSubmit}>
-                                        <div className="field">
-                                            <label htmlFor="id_estatus_alertamiento">Siguiente estatus</label>
-                                            <select
-                                                id="id_estatus_alertamiento"
-                                                name="id_estatus_alertamiento"
-                                                value={selectedStatusId}
-                                                onChange={(event) => setSelectedStatusId(event.target.value)}
-                                                disabled={isUpdatingStatus}
-                                            >
-                                                {availableTransitions.map((transition) => (
-                                                    <option
-                                                        key={transition.id_estatus_alertamiento}
-                                                        value={transition.id_estatus_alertamiento}
-                                                    >
-                                                        {transition.nombre_estatus}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className="button-row">
-                                            <button
-                                                className="button"
-                                                type="submit"
-                                                disabled={isUpdatingStatus}
-                                            >
-                                                {isUpdatingStatus ? 'Actualizando estatus...' : 'Actualizar estatus'}
-                                            </button>
-                                        </div>
-                                    </form>
+                                {historial.length === 0 ? (
+                                    <div className="empty-state">
+                                        <h3>Sin historial</h3>
+                                        <p>Este alertamiento no tiene eventos de historial visibles.</p>
+                                    </div>
                                 ) : (
-                                    <p className="status-action-note">
-                                        {statusActionHint}
-                                    </p>
+                                    <div className="timeline detail-timeline">
+                                        {historial.map((evento) => (
+                                            <article
+                                                key={evento.id_historial_alertamiento}
+                                                className="timeline-item detail-timeline__item"
+                                            >
+                                                <div className="timeline-item__marker detail-timeline__marker" />
+                                                <div className="timeline-item__content detail-timeline__card">
+                                                    <div className="detail-timeline__status">
+                                                        <StatusBadge value={evento.estatus?.nombre_estatus} />
+                                                        <span className="timeline-item__meta detail-timeline__user">
+                                                            Usuario: <span className="mono">{evento.usuario?.nombre_usuario || 'Sistema'}</span>
+                                                        </span>
+                                                    </div>
+                                                    <p className="timeline-item__text detail-timeline__text">
+                                                        {evento.observaciones || 'Sin observaciones.'}
+                                                    </p>
+                                                    <span className="timeline-item__meta detail-timeline__date">
+                                                        {formatDateTime(evento.fecha_evento)}
+                                                    </span>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
                                 )}
-
-                                {statusErrorMessage ? <p className="message">{statusErrorMessage}</p> : null}
                             </section>
                         </div>
-                    </section>
 
-                    <div className="summary-grid">
-                        <section className="summary-box">
-                            <h3>Identificacion</h3>
-                            <DetailPair label="ID alertamiento" value={detail.id_alertamiento} mono />
-                            <DetailPair label="Folio" value={detail.folio_alertamiento} mono />
-                            <DetailPair label="Placa detectada" value={detail.placa_detectada} mono />
-                            <DetailPair label="Fecha deteccion" value={formatDateTime(detail.fecha_hora_deteccion)} />
-                        </section>
+                        <aside className="alertamiento-detail-sidebar">
+                            <div className="detail-control-panel">
+                                <section className="detail-side-card detail-side-card--authorization">
+                                    <div className="detail-side-card__heading">
+                                        <span className="detail-side-card__heading-icon" aria-hidden="true">
+                                            <DetailIcon type="role" />
+                                        </span>
+                                        <div>
+                                            <h3>Contexto de autorización</h3>
+                                            <p>Perfil y alcance aplicados al registro.</p>
+                                        </div>
+                                    </div>
+                                    <div className="detail-badge-stack">
+                                        <span className="detail-soft-badge">
+                                            <span>Perfil autorizado</span>
+                                            <strong>{user?.rol?.nombre_rol || 'Sin rol'}</strong>
+                                        </span>
+                                        <span className="detail-soft-badge">
+                                            <span>Alcance operativo</span>
+                                            <strong>{user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
+                                        </span>
+                                        <span className="detail-soft-badge detail-soft-badge--status">
+                                            <span>Estatus</span>
+                                            <StatusBadge value={detail.estatus?.nombre_estatus} />
+                                        </span>
+                                    </div>
+                                </section>
 
-                        <section className="summary-box">
-                            <h3>Estatus y origen</h3>
-                            <p>
-                                <strong>Estatus:</strong>{' '}
-                                <StatusBadge value={detail.estatus?.nombre_estatus} />
-                            </p>
-                            <DetailPair label="Orden de flujo" value={detail.estatus?.orden_flujo} mono />
-                            <DetailPair label="Origen registro" value={detail.origen_registro} />
-                            <DetailPair label="Observaciones" value={detail.observaciones} />
-                        </section>
-
-                        <section className="summary-box">
-                            <h3>Ubicacion de deteccion</h3>
-                            <DetailPair label="Latitud" value={detail.ubicacion_deteccion?.latitud_deteccion} mono />
-                            <DetailPair label="Longitud" value={detail.ubicacion_deteccion?.longitud_deteccion} mono />
-                            <DetailPair label="Carril" value={detail.ubicacion_deteccion?.carril} />
-                            <DetailPair label="Sentido vial" value={detail.ubicacion_deteccion?.sentido_vial} />
-                        </section>
-
-                        <section className="summary-box">
-                            <h3>Usuario creador</h3>
-                            <DetailPair label="ID usuario" value={detail.usuario_creador?.id_usuario} mono />
-                            <DetailPair label="Usuario" value={detail.usuario_creador?.nombre_usuario} mono />
-                            <DetailPair label="Nombre completo" value={detail.usuario_creador?.nombre_completo} />
-                        </section>
-
-                        <section className="summary-box">
-                            <h3>Contexto operativo</h3>
-                            <DetailPair label="Torre" value={detail.contexto_operativo?.torre?.nombre_torre} />
-                            <DetailPair label="Central" value={detail.contexto_operativo?.central?.nombre_central} />
-                            <DetailPair label="Region" value={detail.contexto_operativo?.region?.nombre_region} />
-                            <DetailPair label="Estado operativo" value={detail.contexto_operativo?.estado_operativo?.nombre_estado} />
-                            <DetailPair label="Territorio" value={detail.contexto_operativo?.territorio?.nombre_territorio} />
-                        </section>
-
-                        <section className="summary-box">
-                            <h3>Fechas de control</h3>
-                            <DetailPair label="Fecha creacion" value={formatDateTime(detail.fechas_control?.fecha_creacion)} />
-                            <DetailPair label="Fecha actualizacion" value={formatDateTime(detail.fechas_control?.fecha_actualizacion)} />
-                        </section>
-                    </div>
-
-                    <section className="history-section">
-                        <div className="section-heading section-heading--compact">
-                            <div>
-                                <h3 className="title title--small">Historial del alertamiento</h3>
-                                <p className="subtitle subtitle--small">
-                                    La linea de tiempo se muestra en orden cronologico ascendente.
-                                </p>
-                            </div>
-                        </div>
-
-                        {historial.length === 0 ? (
-                            <div className="empty-state">
-                                <h3>Sin historial</h3>
-                                <p>Este alertamiento no tiene eventos de historial visibles.</p>
-                            </div>
-                        ) : (
-                            <div className="timeline">
-                                {historial.map((evento) => (
-                                    <article key={evento.id_historial_alertamiento} className="timeline-item">
-                                        <div className="timeline-item__marker" />
-                                        <div className="timeline-item__content">
-                                            <p className="timeline-item__title">
-                                                <StatusBadge value={evento.estatus?.nombre_estatus} />
-                                            </p>
-                                            <p className="timeline-item__meta">
-                                                {formatDateTime(evento.fecha_evento)}
-                                            </p>
-                                            <p className="timeline-item__meta">
-                                                Usuario: <span className="mono">{evento.usuario?.nombre_usuario || 'Sistema'}</span>
-                                            </p>
-                                            <p className="timeline-item__text">
-                                                {evento.observaciones || 'Sin observaciones.'}
+                                <section className="status-action-panel detail-side-card detail-side-card--action">
+                                    <div className="detail-side-card__heading detail-side-card__heading--action">
+                                        <span className="detail-side-card__heading-icon" aria-hidden="true">
+                                            <DetailIcon type="status" />
+                                        </span>
+                                        <div>
+                                            <h3>Transición operativa</h3>
+                                            <p>
+                                                {statusActionHint}
                                             </p>
                                         </div>
-                                    </article>
-                                ))}
+                                    </div>
+
+                                    <div className="status-action-panel__body">
+                                        {availableTransitions.length > 0 ? (
+                                            <form className="status-action-form" onSubmit={handleStatusSubmit}>
+                                                <div className="field">
+                                                    <label htmlFor="id_estatus_alertamiento">Siguiente estatus</label>
+                                                    <select
+                                                        id="id_estatus_alertamiento"
+                                                        name="id_estatus_alertamiento"
+                                                        value={selectedStatusId}
+                                                        onChange={(event) => setSelectedStatusId(event.target.value)}
+                                                        disabled={isUpdatingStatus}
+                                                    >
+                                                        {availableTransitions.map((transition) => (
+                                                            <option
+                                                                key={transition.id_estatus_alertamiento}
+                                                                value={transition.id_estatus_alertamiento}
+                                                            >
+                                                                {transition.nombre_estatus}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div className="button-row">
+                                                    <button
+                                                    className="button"
+                                                    type="submit"
+                                                    disabled={isUpdatingStatus}
+                                                >
+                                                    <span className="button__icon" aria-hidden="true">
+                                                        <DetailIcon type="refresh" />
+                                                    </span>
+                                                    {isUpdatingStatus ? 'Actualizando estatus...' : 'Actualizar estatus'}
+                                                </button>
+                                            </div>
+                                            </form>
+                                        ) : (
+                                            <p className="status-action-note">
+                                                {statusActionHint}
+                                            </p>
+                                        )}
+
+                                        {statusErrorMessage ? <p className="message">{statusErrorMessage}</p> : null}
+                                    </div>
+                                </section>
+
+                                <section className="detail-side-card detail-side-card--quick">
+                                    <div className="detail-side-card__heading detail-side-card__heading--small">
+                                        <span className="detail-side-card__heading-icon" aria-hidden="true">
+                                            <DetailIcon type="identification" />
+                                        </span>
+                                        <div>
+                                            <h3>Resumen rápido</h3>
+                                        </div>
+                                    </div>
+                                    <div className="detail-quick-grid">
+                                        <div className="detail-quick-item">
+                                            <span>Placa</span>
+                                            <strong className="mono">{detail.placa_detectada || 'Sin dato'}</strong>
+                                        </div>
+                                        <div className="detail-quick-item">
+                                            <span>Torre</span>
+                                            <strong>{detail.contexto_operativo?.torre?.nombre_torre || 'Sin dato'}</strong>
+                                        </div>
+                                        <div className="detail-quick-item">
+                                            <span>Última fecha</span>
+                                            <strong>{formatDateTime(executiveDate)}</strong>
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
-                        )}
-                    </section>
+                        </aside>
+                    </div>
                 </>
             ) : null}
         </section>

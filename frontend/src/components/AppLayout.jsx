@@ -38,7 +38,7 @@ function AppLayout() {
                             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
                             to="/dashboard"
                         >
-                            Dashboard
+                            Panel de control
                         </NavLink>
                         <NavLink
                             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
@@ -50,14 +50,14 @@ function AppLayout() {
                             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
                             to="/mapa"
                         >
-                            Mapa
+                            Mapa operativo
                         </NavLink>
                         {isAdministrador ? (
                             <NavLink
                                 className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
                                 to="/usuarios"
                             >
-                                Usuarios
+                                Gestión de usuarios
                             </NavLink>
                         ) : null}
                     </nav>

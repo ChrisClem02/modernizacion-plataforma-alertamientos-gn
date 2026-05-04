@@ -22,6 +22,41 @@ const INITIAL_MAP_DATA = {
     alertamientos: []
 };
 
+const TOWER_MARKER_ICON = `
+    <span class="map-marker__pin" aria-hidden="true">
+        <svg class="map-marker__icon" viewBox="0 0 24 24" focusable="false">
+            <path d="M12 5v14" />
+            <path d="M8 19h8" />
+            <path d="M9.5 9.5 12 7l2.5 2.5" />
+            <path d="M8 12.5a5.5 5.5 0 0 1 0-7.8" />
+            <path d="M16 12.5a5.5 5.5 0 0 0 0-7.8" />
+        </svg>
+    </span>
+`;
+
+const ALERT_MARKER_ICON = `
+    <span class="map-marker__pin" aria-hidden="true">
+        <svg class="map-marker__icon" viewBox="0 0 24 24" focusable="false">
+            <path d="M12 4v9" />
+            <path d="M8.5 8.5a5 5 0 0 0 0 7" />
+            <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            <path d="M6 6a8.5 8.5 0 0 0 0 12" />
+            <path d="M18 6a8.5 8.5 0 0 1 0 12" />
+            <path d="M12 18h.01" />
+        </svg>
+    </span>
+`;
+
+const POPUP_HEADER_ICON = `
+    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M12 5v14" />
+        <path d="M8 19h8" />
+        <path d="M9.5 9.5 12 7l2.5 2.5" />
+        <path d="M8 12.5a5.5 5.5 0 0 1 0-7.8" />
+        <path d="M16 12.5a5.5 5.5 0 0 0 0-7.8" />
+    </svg>
+`;
+
 function getApiErrorMessage(error, fallbackMessage) {
     return error?.response?.data?.message || fallbackMessage;
 }
@@ -127,69 +162,172 @@ function getStatusInitial(alertamiento) {
     return '?';
 }
 
+function getAlertamientoBadgeClass(alertamiento) {
+    const statusName = normalizeStatusName(alertamiento);
+
+    if (statusName === 'VALIDADO') {
+        return 'map-alert-status map-alert-status--validado';
+    }
+
+    if (statusName === 'CERRADO') {
+        return 'map-alert-status map-alert-status--cerrado';
+    }
+
+    if (statusName === 'DETECTADO') {
+        return 'map-alert-status map-alert-status--detectado';
+    }
+
+    if (statusName === 'EN_ATENCION') {
+        return 'map-alert-status map-alert-status--atencion';
+    }
+
+    return 'map-alert-status';
+}
+
 function createTorreIcon() {
     return L.divIcon({
         className: 'map-marker map-marker--torre',
-        html: '<span>T</span>',
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-        popupAnchor: [0, -18]
+        html: TOWER_MARKER_ICON,
+        iconSize: [38, 46],
+        iconAnchor: [19, 43],
+        popupAnchor: [0, -40]
     });
 }
 
 function createAlertamientoIcon(alertamiento) {
     return L.divIcon({
         className: `map-marker map-marker--alertamiento ${getStatusClass(alertamiento)}`,
-        html: `<span>${getStatusInitial(alertamiento)}</span>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -18]
+        html: ALERT_MARKER_ICON,
+        iconSize: [36, 44],
+        iconAnchor: [18, 41],
+        popupAnchor: [0, -38]
     });
 }
 
+function hasPopupValue(value) {
+    return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
+function formatCoordinate(value) {
+    const coordinate = Number(value);
+
+    if (!Number.isFinite(coordinate)) {
+        return null;
+    }
+
+    return coordinate.toFixed(6);
+}
+
+function appendPopupHeader(container, { title, badgeText, badgeClass }) {
+    const header = document.createElement('div');
+    const icon = document.createElement('span');
+    const content = document.createElement('div');
+    const heading = document.createElement('h3');
+    const badge = document.createElement('span');
+
+    header.className = 'map-popup__header';
+    icon.className = 'map-popup__header-icon';
+    icon.innerHTML = POPUP_HEADER_ICON;
+    content.className = 'map-popup__header-content';
+    heading.textContent = title;
+    badge.className = badgeClass;
+    badge.textContent = badgeText;
+
+    content.appendChild(heading);
+    content.appendChild(badge);
+    header.appendChild(icon);
+    header.appendChild(content);
+    container.appendChild(header);
+}
+
 function appendPopupLine(container, label, value) {
+    if (!hasPopupValue(value)) {
+        return;
+    }
+
     const line = document.createElement('p');
     const strong = document.createElement('strong');
-    const text = document.createTextNode(value || 'Sin dato');
+    const text = document.createElement('span');
 
-    strong.textContent = `${label}: `;
+    line.className = 'map-popup__row';
+    strong.textContent = label;
+    text.textContent = value;
     line.appendChild(strong);
     line.appendChild(text);
     container.appendChild(line);
 }
 
+function appendPopupSection(container, title, rows) {
+    const visibleRows = rows.filter(({ value }) => hasPopupValue(value));
+
+    if (visibleRows.length === 0) {
+        return;
+    }
+
+    const section = document.createElement('section');
+    const heading = document.createElement('h4');
+
+    section.className = 'map-popup__section';
+    heading.textContent = title;
+    section.appendChild(heading);
+
+    visibleRows.forEach(({ label, value }) => appendPopupLine(section, label, value));
+    container.appendChild(section);
+}
+
 function createTorrePopup(torre) {
     const container = document.createElement('div');
-    const title = document.createElement('h3');
 
-    container.className = 'map-popup';
-    title.textContent = torre.nombre_torre || `Torre ${torre.id_torre}`;
-    container.appendChild(title);
+    container.className = 'map-popup map-popup--torre';
+    appendPopupHeader(container, {
+        title: torre.nombre_torre || 'Torre operativa',
+        badgeText: 'Torre operativa',
+        badgeClass: 'map-alert-status map-alert-status--validado map-popup__status'
+    });
 
-    appendPopupLine(container, 'Codigo', torre.codigo_torre);
-    appendPopupLine(container, 'Estado', torre.estado?.nombre_estado);
-    appendPopupLine(container, 'Central', torre.central?.nombre_central);
-    appendPopupLine(container, 'Region', torre.region?.nombre_region);
+    appendPopupSection(container, 'Información operativa', [
+        { label: 'ID Torre', value: torre.id_torre },
+        { label: 'Código', value: torre.codigo_torre },
+        { label: 'Central', value: torre.central?.nombre_central },
+        { label: 'Región', value: torre.region?.nombre_region },
+        { label: 'Estado', value: torre.estado?.nombre_estado },
+        { label: 'Municipio', value: torre.municipio?.nombre_municipio }
+    ]);
+
+    appendPopupSection(container, 'Ubicación', [
+        { label: 'Latitud', value: formatCoordinate(torre.coordenada?.latitud) },
+        { label: 'Longitud', value: formatCoordinate(torre.coordenada?.longitud) },
+        { label: 'Dirección', value: torre.direccion }
+    ]);
 
     return container;
 }
 
 function createAlertamientoPopup(alertamiento) {
     const container = document.createElement('div');
-    const title = document.createElement('h3');
     const link = document.createElement('a');
 
-    container.className = 'map-popup';
-    title.textContent = alertamiento.folio_alertamiento || `Alertamiento ${alertamiento.id_alertamiento}`;
-    container.appendChild(title);
+    container.className = 'map-popup map-popup--alertamiento';
+    appendPopupHeader(container, {
+        title: alertamiento.placa_detectada || 'Alertamiento sin placa',
+        badgeText: alertamiento.estatus?.nombre_estatus || 'Sin estatus',
+        badgeClass: `${getAlertamientoBadgeClass(alertamiento)} map-popup__status`
+    });
 
-    appendPopupLine(container, 'Placa', alertamiento.placa_detectada);
-    appendPopupLine(container, 'Estatus', alertamiento.estatus?.nombre_estatus);
-    appendPopupLine(container, 'Torre', alertamiento.torre?.nombre_torre);
-    appendPopupLine(container, 'Fecha/hora', formatDateTime(alertamiento.fecha_hora_deteccion));
-    appendPopupLine(container, 'Fuente coordenada', alertamiento.fuente_coordenada);
+    appendPopupSection(container, 'Información operativa', [
+        { label: 'Placa', value: alertamiento.placa_detectada },
+        { label: 'Torre', value: alertamiento.torre?.nombre_torre },
+        { label: 'Fecha/hora', value: formatDateTime(alertamiento.fecha_hora_deteccion) },
+        { label: 'Fuente coordenada', value: alertamiento.fuente_coordenada }
+    ]);
 
-    link.className = 'button button--inline button--small';
+    appendPopupSection(container, 'Ubicación', [
+        { label: 'Latitud', value: formatCoordinate(alertamiento.coordenada?.latitud) },
+        { label: 'Longitud', value: formatCoordinate(alertamiento.coordenada?.longitud) },
+        { label: 'Dirección', value: alertamiento.direccion }
+    ]);
+
+    link.className = 'button button--inline button--small map-popup__detail-link';
     link.href = `/alertamientos/${alertamiento.id_alertamiento}`;
     link.textContent = 'Ver detalle';
     container.appendChild(link);
@@ -254,6 +392,17 @@ function MapaPage() {
     const towerOptions = useMemo(
         () => buildTowerOptions(mapData.torres, filtersForm.id_torre),
         [mapData.torres, filtersForm.id_torre]
+    );
+    const latestVisibleAlertamientos = useMemo(
+        () => [...mapData.alertamientos]
+            .sort((left, right) => {
+                const leftTime = new Date(left.fecha_hora_deteccion || 0).getTime();
+                const rightTime = new Date(right.fecha_hora_deteccion || 0).getTime();
+
+                return rightTime - leftTime;
+            })
+            .slice(0, 5),
+        [mapData.alertamientos]
     );
 
     useEffect(() => {
@@ -427,32 +576,31 @@ function MapaPage() {
     }
 
     const resumen = mapData.resumen || {};
-    const alertamientosSinCoordenadas = mapData.alertamientos.filter((alertamiento) => !alertamiento.ubicable);
 
     return (
-        <section className="card card--wide">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">Vista Geografica</p>
-                    <h2 className="title">Mapa Operativo V1</h2>
+        <section className="card card--wide mapa-page">
+            <div className="section-heading section-heading--module mapa-page__heading">
+                <div className="section-heading__content">
+                    <p className="eyebrow">Vista geográfica</p>
+                    <h2 className="title">Mapa Operativo</h2>
                     <p className="subtitle">
                         Torres y alertamientos visibles conforme al ámbito institucional del usuario autenticado.
                     </p>
                 </div>
 
-                <div className="info-chip">
+                <div className="info-chip info-chip--compact">
                     <span className="info-chip__label">Visibilidad actual</span>
                     <strong>{mapData.visibilidad?.nivel_operativo || user?.nivel_operativo?.nombre_nivel || 'Sin nivel'}</strong>
                 </div>
             </div>
 
-            <form className="filter-panel filter-panel--mapa" onSubmit={handleSearchSubmit}>
-                <div className="panel-heading">
+            <form className="filter-panel filter-panel--mapa map-filter-bar" onSubmit={handleSearchSubmit}>
+                <div className="panel-heading map-filter-bar__heading">
                     <h3>Filtros del mapa</h3>
-                    <p>Consulta torres y alertamientos visibles sin modificar la visibilidad institucional.</p>
+                    <p>Consulta operativa visible.</p>
                 </div>
 
-                <div className="filter-grid">
+                <div className="filter-grid map-filter-grid">
                     <div className="field">
                         <label htmlFor="mapa_fecha_inicio">Fecha inicio</label>
                         <input
@@ -510,7 +658,7 @@ function MapaPage() {
                     </div>
                 </div>
 
-                <div className="button-row">
+                <div className="button-row map-filter-actions">
                     <button className="button" type="submit">
                         Aplicar filtros
                     </button>
@@ -523,29 +671,6 @@ function MapaPage() {
 
             {errorMessage ? <p className="message">{errorMessage}</p> : null}
 
-            <div className="summary-grid summary-grid--mapa">
-                <div className="summary-box map-summary-card">
-                    <span className="map-summary-card__label">Infraestructura</span>
-                    <h3>Torres visibles</h3>
-                    <p className="summary-number">{resumen.total_torres_visibles ?? 0}</p>
-                    <p>{resumen.torres_sin_coordenadas ?? 0} sin coordenadas</p>
-                </div>
-
-                <div className="summary-box map-summary-card">
-                    <span className="map-summary-card__label">Operación</span>
-                    <h3>Alertamientos devueltos</h3>
-                    <p className="summary-number">{resumen.total_alertamientos_devuelto ?? 0}</p>
-                    <p>{resumen.total_alertamientos_filtrados ?? 0} filtrados en backend</p>
-                </div>
-
-                <div className="summary-box map-summary-card map-summary-card--warning">
-                    <span className="map-summary-card__label">Calidad de datos</span>
-                    <h3>Registros sin coordenadas</h3>
-                    <p className="summary-number">{resumen.alertamientos_sin_coordenadas ?? 0}</p>
-                    <p>Alertamientos no ubicables en el mapa</p>
-                </div>
-            </div>
-
             {isLoading ? (
                 <p className="loading-state">Consultando torres y alertamientos visibles...</p>
             ) : null}
@@ -556,7 +681,7 @@ function MapaPage() {
                 </div>
 
                 <aside className="map-side-panel">
-                    <div>
+                    <div className="map-side-block">
                         <div className="panel-heading">
                             <h3>Leyenda</h3>
                             <p>Marcadores diferenciados por tipo y estatus.</p>
@@ -585,22 +710,56 @@ function MapaPage() {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="map-side-block">
                         <div className="panel-heading">
-                            <h3>Alertamientos sin coordenadas</h3>
-                            <p>Registros devueltos que no pueden ubicarse en el mapa.</p>
+                            <h3>Resumen operativo</h3>
+                            <p>Indicadores visibles para el ámbito actual.</p>
                         </div>
-                        {alertamientosSinCoordenadas.length === 0 ? (
-                            <p className="field-hint">No hay alertamientos devueltos sin coordenadas.</p>
+
+                        <div className="map-side-summary">
+                            <div className="map-side-summary__row">
+                                <span>Torres visibles</span>
+                                <strong>{resumen.total_torres_visibles ?? 0}</strong>
+                            </div>
+                            <div className="map-side-summary__row">
+                                <span>Alertamientos visibles</span>
+                                <strong>{resumen.total_alertamientos_devuelto ?? 0}</strong>
+                            </div>
+                            <div className="map-side-summary__row">
+                                <span>Sin coordenadas</span>
+                                <strong>{resumen.alertamientos_sin_coordenadas ?? 0}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="map-side-block">
+                        <div className="panel-heading">
+                            <h3>Últimos alertamientos visibles</h3>
+                            <p>Registros disponibles con los filtros actuales.</p>
+                        </div>
+
+                        {latestVisibleAlertamientos.length === 0 ? (
+                            <p className="field-hint map-alert-empty">
+                                Sin alertamientos visibles con los filtros actuales.
+                            </p>
                         ) : (
-                            <ul className="map-alert-list">
-                                {alertamientosSinCoordenadas.map((alertamiento) => (
+                            <ul className="map-latest-alerts">
+                                {latestVisibleAlertamientos.map((alertamiento) => (
                                     <li key={alertamiento.id_alertamiento}>
-                                        <strong className="mono">{alertamiento.placa_detectada}</strong>
-                                        <span>{alertamiento.estatus?.nombre_estatus || 'Sin estatus'}</span>
-                                        <Link to={`/alertamientos/${alertamiento.id_alertamiento}`}>
-                                            Ver detalle
-                                        </Link>
+                                        <div className="map-latest-alerts__main">
+                                            <strong className="mono">
+                                                {alertamiento.placa_detectada || 'Sin placa'}
+                                            </strong>
+                                            <span className={getAlertamientoBadgeClass(alertamiento)}>
+                                                {alertamiento.estatus?.nombre_estatus || 'Sin estatus'}
+                                            </span>
+                                        </div>
+                                        <div className="map-latest-alerts__meta">
+                                            <span>{formatDateTime(alertamiento.fecha_hora_deteccion)}</span>
+                                            <Link to={`/alertamientos/${alertamiento.id_alertamiento}`}>
+                                                Detalle
+                                            </Link>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
