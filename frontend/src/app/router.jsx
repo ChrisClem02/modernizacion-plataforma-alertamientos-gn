@@ -5,10 +5,13 @@ import AppLayout from '../components/AppLayout';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AlertamientoDetailPage from '../pages/AlertamientoDetailPage';
 import AlertamientosPage from '../pages/AlertamientosPage';
+import AuditoriaDetailPage from '../pages/AuditoriaDetailPage';
+import AuditoriaPage from '../pages/AuditoriaPage';
 import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
 import MapaPage from '../pages/MapaPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import ProfilePage from '../pages/ProfilePage';
 import UsuariosPage from '../pages/UsuariosPage';
 
 // Router protegido extendido: ahora el frontend puede navegar entre dashboard,
@@ -33,6 +36,10 @@ export const appRouter = createBrowserRouter([
                         element: <DashboardPage />
                     },
                     {
+                        path: '/perfil',
+                        element: <ProfilePage />
+                    },
+                    {
                         path: '/alertamientos',
                         element: <AlertamientosPage />
                     },
@@ -49,6 +56,22 @@ export const appRouter = createBrowserRouter([
                         element: (
                             <AdminRoute>
                                 <UsuariosPage />
+                            </AdminRoute>
+                        )
+                    },
+                    {
+                        path: '/auditoria',
+                        element: (
+                            <AdminRoute>
+                                <AuditoriaPage />
+                            </AdminRoute>
+                        )
+                    },
+                    {
+                        path: '/auditoria/:id',
+                        element: (
+                            <AdminRoute>
+                                <AuditoriaDetailPage />
                             </AdminRoute>
                         )
                     }
